@@ -1,0 +1,9 @@
+
+file(GLOB_RECURSE SOURCES "bb_core/*.c" "devices/*.c")
+
+add_library(longwires STATIC ${SOURCES})
+
+target_include_directories(longwires PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/bb_core
+    ${CMAKE_CURRENT_SOURCE_DIR}/devices
+)
