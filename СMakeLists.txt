@@ -1,9 +1,12 @@
-
 file(GLOB_RECURSE SOURCES "bb_core/*.c" "devices/*.c")
 
-add_library(longwires STATIC ${SOURCES})
-
-target_include_directories(longwires PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/bb_core
-    ${CMAKE_CURRENT_SOURCE_DIR}/devices
+idf_component_register(
+    SRCS ${SOURCES}
+    INCLUDE_DIRS
+        "bb_core"
+        "devices"
+    REQUIRES
+        driver
 )
+
+target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_PLATFORM)
