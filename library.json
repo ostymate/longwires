@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "build": {
     "srcFilter": ["+<bb_core/*.c>", "+<devices/*.c>"],
+<<<<<<< HEAD
     "includeDir": [".", "bb_core", "devices"]
+=======
+    "includeDir": "."
+>>>>>>> 8d5163669e9ab160e17c10b243ba01ac18af36d7
   }
 }
