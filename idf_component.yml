@@ -1,5 +1,5 @@
 version: "1.0.0"
-description: "Long-distance I2C and 1-Wire library"
+description: "Software bitbang I2C and 1-Wire library for ESP-IDF"
 url: "https://github.com/ostymate/longwires"
 
 targets:
