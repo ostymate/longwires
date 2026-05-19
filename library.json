@@ -1,6 +1,6 @@
 {
   "name": "longwires",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "build": {
     "srcFilter": ["+<bb_core/*.c>", "+<devices/*.c>"],
     "includeDir": "devices"
