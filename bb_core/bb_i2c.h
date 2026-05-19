@@ -17,10 +17,10 @@
 
 #include "bb_utils.h"
 
-/** Default I2C frequency: 100KHz */
+/* Default I2C frequency: 100KHz */
 #define I2C_DEFAULT_FREQ_HZ 100000UL
 
-/** Default clock stretching timeout: 25ms   */
+/* Default clock stretching timeout: 25ms   */
 #define DEFAULT_CLOCK_STRETCHING_TIMEOUT_US 25000UL
 
 /**
