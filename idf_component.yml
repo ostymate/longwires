@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.0.1"
 description: "Software bitbang I2C and 1-Wire library for ESP-IDF"
 url: "https://github.com/ostymate/longwires"
 
