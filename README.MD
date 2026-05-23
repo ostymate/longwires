@@ -53,18 +53,17 @@ lib_deps =
 
 gpio_pin_t SDA = 25;
 gpio_pin_t SCL = 26;
-gpio_pin_t VCC = 15;
-
 
 void app_main(void)
 {
     sht3x_sensor_t sensor;
-    sht3x_init(&sensor, SDA, SCL, 100000, 0x44, &VCC);
+    float humidity, temperature;
+    sht3x_init(&sensor, SDA, SCL, true);
 
     while (1)
     {
-        sht3x_perform_measurement(&sensor, 0, 0);
-        printf("Temperature: %.1f C, Humidity: %d%%\n", sensor.temp_x10 / 10.0, sensor.hum);
+        sht3x_read(&sensor, &temperature, &humidity);
+        printf("Temperature: %.1f C, Humidity: %.1f%%\n", temperature, humidity);
         printf("Success count: %lu, Error count: %lu\n", sensor.success_count, sensor.error_count);
         printf("Sensor is %s\n", sensor.is_active ? "active" : "inactive");
         printf("actual_freq_hz: %lu\n", sensor.i2c_bb_device.actual_freq_hz); // Print the actual I2C frequency for debugging

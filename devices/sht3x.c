@@ -1,7 +1,5 @@
 #include "sht3x.h"
 
-#define POWER_ON_DELAY_US 1000
-
 /* high repeatability single measurement with clock stretching */
 static const uint8_t sht3x_high_rep_cmd[] = {0x2C, 0x06};
 
@@ -29,7 +27,7 @@ static const uint8_t crc8_table_poly_0x31[256] = {
     0x82, 0xB3, 0xE0, 0xD1, 0x46, 0x77, 0x24, 0x15, 0x3B, 0x0A, 0x59, 0x68, 0xFF, 0xCE, 0x9D, 0xAC};
 
 /* SHT3X CRC check */
-static inline bool sht3x_check_crc(const uint8_t *raw_data)
+static bool sht3x_check_crc(const uint8_t *raw_data)
 {
     /* SHT3X_RAW_DATA_STRUCTURE[] = {TEMP_MSB, TEMP_LSB, TEMP_CRC, HUM_MSB, HUM_LSB, HUM_CRC}; */
 
@@ -45,41 +43,23 @@ static inline bool sht3x_check_crc(const uint8_t *raw_data)
     return (temp_crc == raw_data[2]) && (hum_crc == raw_data[5]);
 }
 
-static void sht3x_power_on(sht3x_sensor_t *sensor)
-{
-    BB_GPIO_INIT_PUSH_PULL((*(sensor->vcc_pin)));
-    BB_GPIO_PIN_SET((*(sensor->vcc_pin)));
-    BB_DELAY_TICKS(BB_US_TO_TICKS(POWER_ON_DELAY_US));
-}
 
-static void sht3x_power_off(sht3x_sensor_t *sensor)
+void sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool default_addr)
 {
-    BB_GPIO_INIT_INPUT_FLOATING((*(sensor->vcc_pin)));
-}
-
-void sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, uint32_t freq_hz, uint8_t addr, gpio_pin_t *vcc_pin)
-{
-    sensor->i2c_bb_device.addr = (addr == SHT3X_DEFAULT_ADDR || addr == SHT3X_ALT_ADDR) ? addr : SHT3X_DEFAULT_ADDR;
-    sensor->i2c_bb_device.freq_hz = freq_hz;
+    sensor->i2c_bb_device.addr = default_addr ?  SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR;
+    sensor->i2c_bb_device.freq_hz = SHT3X_DEFAULT_FREQ;
     sensor->i2c_bb_device.sda_pin = sda_pin;
     sensor->i2c_bb_device.scl_pin = scl_pin;
     i2c_bb_init(&sensor->i2c_bb_device);
     sensor->error_count = 0;
     sensor->success_count = 0;
     sensor->is_active = false;
-    if (vcc_pin)
-        sensor->vcc_pin = vcc_pin;
-    else
-        sensor->vcc_pin = 0;
 }
 
-bool sht3x_perform_measurement(sht3x_sensor_t *sensor, float *temperature, float *humidity)
+bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
 {
     if (!sensor)
         return false;
-
-    if (sensor->vcc_pin)
-        sht3x_power_on(sensor);
 
     uint8_t raw_data[6] = {0};
     bool success = i2c_bb_transaction(&sensor->i2c_bb_device,
@@ -88,9 +68,6 @@ bool sht3x_perform_measurement(sht3x_sensor_t *sensor, float *temperature, float
                                       raw_data, sizeof(raw_data),
                                       true,
                                       true);
-
-    if (sensor->vcc_pin)
-        sht3x_power_off(sensor);
 
     success &= sht3x_check_crc(raw_data);
 
@@ -103,6 +80,7 @@ bool sht3x_perform_measurement(sht3x_sensor_t *sensor, float *temperature, float
 
     success &= temp_x10 >= SHT3X_VALID_TEMP_X10_MIN_C;
     success &= temp_x10 <= SHT3X_VALID_TEMP_X10_MAX_C;
+    success &= hum <= 100;
 
     if (success)
     {
