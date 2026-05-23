@@ -83,4 +83,4 @@ void app_main(void)
 
 
 ## why?
-because hardware I2C can't handle 100 meters of twisted pair or communicate with I2C sensors @ 1Hz frequency
+because hardware I2C can't handle 100 meters of twisted pair or communicate with I2C sensors with adaptive frequency
