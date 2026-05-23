@@ -42,15 +42,4 @@ static inline void bb_gpio_configure_pin(uint32_t pin, gpio_mode_t mode)
 
 #define CPU_CLOCK_FREQ_HZ (esp_clk_cpu_freq())
 
-/* ESP implementation without critical sections for RTOS compatability */
-#define BB_ENTER_CRITICAL() \
-    {                       \
-    }
-
-#define BB_EXIT_CRITICAL() \
-    {                      \
-    }
-
-#define BB_TICKS_SOURCE_INIT() \
-    {                          \
-    }
+#define BB_TICKS_SOURCE_INIT() {}

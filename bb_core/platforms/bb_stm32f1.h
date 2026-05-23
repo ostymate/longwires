@@ -55,9 +55,3 @@ static inline void bb_gpio_configure_pin(GPIO_TypeDef *GPIOx, uint32_t pin, uint
 #define BB_GET_TICKS(TICKS) (TICKS = DWT->CYCCNT)
 
 #define CPU_CLOCK_FREQ_HZ (SystemCoreClock)
-
-#define BB_ENTER_CRITICAL()             \
-    uint32_t primask = __get_PRIMASK(); \
-    __disable_irq()
-
-#define BB_EXIT_CRITICAL() __set_PRIMASK(primask)

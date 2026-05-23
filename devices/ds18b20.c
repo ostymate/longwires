@@ -20,6 +20,7 @@ void ds18b20_init(ds18b20_sensor_t *sensor, gpio_pin_t data_pin)
     sensor->error_count = 0;
     sensor->success_count = 0;
     BB_GPIO_INIT_OPEN_DRAIN(data_pin);
+    BB_TICKS_SOURCE_INIT();
 }
 
 static void ds18b20_process_error(ds18b20_sensor_t *sensor)
@@ -42,7 +43,7 @@ void ds18b20_update_measurement(ds18b20_sensor_t *sensor)
         if ((current_ticks - sensor->conversion_started) < BB_US_TO_TICKS(DS18B20_CONVERSION_US))
             return;
 
-        BB_ENTER_CRITICAL();
+        
         //  Read temperature data
         if (onewire_check_presence(sensor->data_pin))
         {
@@ -74,11 +75,11 @@ void ds18b20_update_measurement(ds18b20_sensor_t *sensor)
         }
         else
             ds18b20_process_error(sensor);
-        BB_EXIT_CRITICAL();
+       
     }
     else
     {
-        BB_ENTER_CRITICAL();
+        
         if (onewire_check_presence(sensor->data_pin))
         {
             onewire_write_byte(sensor->data_pin, ONEWIRE_CMD_SKIP_ROM);
@@ -88,6 +89,6 @@ void ds18b20_update_measurement(ds18b20_sensor_t *sensor)
         }
         else
             ds18b20_process_error(sensor);
-        BB_EXIT_CRITICAL();
+       
     }
 }
