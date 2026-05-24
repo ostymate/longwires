@@ -164,9 +164,9 @@ void setup_adaptive_timing(i2c_bb_device_t *device)
     device->freq_hz = (device->freq_hz > MAX_I2C_FREQ_HZ) ? MAX_I2C_FREQ_HZ : device->freq_hz;
 
     /* use higher value between initial and user defined half clock ticks to provide stable timing even with long wires and slow devices during timing setup */
-    uint32_t initial_hold_ticks = (CPU_CLOCK_FREQ_HZ / INIT_I2C_FREQ_HZ) / 2;     /* calculate initial half clock period in ticks for timing setup */
-    uint32_t user_defined_hold_ticks = (CPU_CLOCK_FREQ_HZ / device->freq_hz) / 2; /* calculate user defined half clock period in ticks for timing setup */
-    device->t_hold_ticks = initial_hold_ticks > user_defined_hold_ticks ? initial_hold_ticks : user_defined_hold_ticks;
+    uint32_t initial_hold_ticks = (CPU_CLOCK_FREQ_HZ / INIT_I2C_FREQ_HZ) / 2;                                           /* calculate initial half clock period in ticks for timing setup */
+    uint32_t user_defined_hold_ticks = (CPU_CLOCK_FREQ_HZ / device->freq_hz) / 2;                                       /* calculate user defined half clock period in ticks for timing setup */
+    device->t_hold_ticks = initial_hold_ticks > user_defined_hold_ticks ? initial_hold_ticks : user_defined_hold_ticks; /* use higher value (lower frequency) for stable timing */
 
     clean_bus(device);
 
@@ -176,15 +176,19 @@ void setup_adaptive_timing(i2c_bb_device_t *device)
     set_level(device->sda_pin, device->t_hold_ticks, 1, &t_rise_sda_ticks);
     set_level(device->scl_pin, device->t_hold_ticks, 1, &t_rise_scl_ticks);
 
-    device->t_hold_ticks = t_rise_sda_ticks > user_defined_hold_ticks ? t_rise_sda_ticks : user_defined_hold_ticks;
-    device->t_hold_ticks = t_rise_scl_ticks > device->t_hold_ticks ? t_rise_scl_ticks : device->t_hold_ticks;
+    uint32_t t_worst_rise_ticks = (t_rise_sda_ticks > t_rise_scl_ticks) ? t_rise_sda_ticks : t_rise_scl_ticks;
+    device->t_hold_ticks = t_worst_rise_ticks > user_defined_hold_ticks ? t_worst_rise_ticks : user_defined_hold_ticks; /* use higher value between worst rise time and user defined hold ticks for stable timing */
 
-    device->actual_freq_hz = CPU_CLOCK_FREQ_HZ / (device->t_hold_ticks * 2 + device->t_hold_ticks); /* calculate actual frequency based on measured rise time and hold time */
+    device->actual_freq_hz = CPU_CLOCK_FREQ_HZ / ((device->t_hold_ticks * 2) + t_worst_rise_ticks);/* calculate actual frequency based on adaptive timing setup */
+
 }
 
 bool i2c_bb_write(i2c_bb_device_t *device, const uint8_t *data, uint32_t len, bool write_stop)
 {
     setup_adaptive_timing(device);
+
+    uint32_t start_tick, end_tick;
+    BB_GET_TICKS(start_tick);
 
     i2c_bb_start(device);
     if (!i2c_bb_write_byte(device, (((device->addr) << 1U) | 0x00U)))
@@ -198,11 +202,19 @@ bool i2c_bb_write(i2c_bb_device_t *device, const uint8_t *data, uint32_t len, bo
     if (write_stop)
         i2c_bb_stop(device);
 
+    BB_GET_TICKS(end_tick);
+    uint32_t elapsed_ticks = end_tick - start_tick;
+
+    device->bits_per_second = (device->bits_per_second + len * 8UL * CPU_CLOCK_FREQ_HZ / elapsed_ticks) / 2UL; /* calculate bits per second based on total bits sent and elapsed time. */
+
     return true;
 }
 
 bool i2c_bb_read(i2c_bb_device_t *device, uint8_t *buffer, uint32_t len, bool read_stop)
 {
+    uint32_t start_tick, end_tick;
+    BB_GET_TICKS(start_tick);
+
     i2c_bb_start(device);
     if (!i2c_bb_write_byte(device, (((device->addr) << 1U) | 0x01U)))
         return false;
@@ -214,6 +226,10 @@ bool i2c_bb_read(i2c_bb_device_t *device, uint8_t *buffer, uint32_t len, bool re
     }
     if (read_stop)
         i2c_bb_stop(device);
+
+    BB_GET_TICKS(end_tick);
+    uint32_t elapsed_ticks = end_tick - start_tick;
+    device->bits_per_second = (device->bits_per_second + len * 8UL * CPU_CLOCK_FREQ_HZ / elapsed_ticks) / 2UL; /* calculate bits per second based on total bits read and elapsed time. */
 
     return true;
 }
@@ -236,6 +252,8 @@ void i2c_bb_init(i2c_bb_device_t *device)
     BB_GPIO_INIT_OPEN_DRAIN(device->scl_pin);
     BB_GPIO_PIN_SET(device->sda_pin);
     BB_GPIO_PIN_SET(device->scl_pin);
+    setup_adaptive_timing(device);
+    device->bits_per_second = 0;
 }
 
 bool i2c_bb_device_available(i2c_bb_device_t *device)

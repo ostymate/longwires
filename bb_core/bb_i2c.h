@@ -26,7 +26,7 @@
  * @param scl_pin SCL pin (Also needs OD with input-output)
  * @param addr I2C device address
  * @param freq_hz user defined I2C device frequency
- * @param actual_freq_hz;  actual frequency calculated from adaptive delay ticks 
+ * @param bits_per_second average payload bits per second (calculated during transactions) without start/stop bits and ACK/NACK bits (for debugging and performance monitoring purposes)
  * @param t_hold_ticks adaptive delay ticks for half clock period (delay is processed after each level change to provide stable timing even with long wires and slow devices)
  * @warning if freq_hz == 0, default frequency will be used (100kHz)
  */
@@ -37,6 +37,7 @@ typedef struct i2c_bb_device_t
     uint8_t addr;
     uint32_t freq_hz;
     uint32_t actual_freq_hz;
+    uint32_t bits_per_second;
     uint32_t t_hold_ticks;
 } i2c_bb_device_t;
 
