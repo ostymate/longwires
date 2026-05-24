@@ -12,7 +12,6 @@
  * Optional repeated start - no stop condition between operations if needed
  * Simple API: init, write, read, transaction (write followed by read with repeated start in between), device availability check (ping)
  * Robust level setting with confirmation (for stable timing even with long wires and slow devices)
- * Available MCUs: ESP32 (XTensa and RISC-V series), STM32F1
  *
  */
 
@@ -26,9 +25,11 @@
  * @param scl_pin SCL pin (Also needs OD with input-output)
  * @param addr I2C device address
  * @param freq_hz user defined I2C device frequency
+ * @param actual_freq_hz actual I2C frequency based on adaptive timing setup (for debugging and performance monitoring purposes)
  * @param bits_per_second average payload bits per second (calculated during transactions) without start/stop bits and ACK/NACK bits (for debugging and performance monitoring purposes)
  * @param t_hold_ticks adaptive delay ticks for half clock period (delay is processed after each level change to provide stable timing even with long wires and slow devices)
- * @warning if freq_hz == 0, default frequency will be used (100kHz)
+ * @param t_rise_us measured worst rise time (SDA and SCL) in microseconds (for debugging and performance monitoring purposes)
+ * @warning if freq_hz is set to 0, default frequency will be used (100kHz)
  */
 typedef struct i2c_bb_device_t
 {
@@ -39,6 +40,7 @@ typedef struct i2c_bb_device_t
     uint32_t actual_freq_hz;
     uint32_t bits_per_second;
     uint32_t t_hold_ticks;
+    uint32_t t_rise_us; 
 } i2c_bb_device_t;
 
 /**

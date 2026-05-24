@@ -178,9 +178,9 @@ void setup_adaptive_timing(i2c_bb_device_t *device)
 
     uint32_t t_worst_rise_ticks = (t_rise_sda_ticks > t_rise_scl_ticks) ? t_rise_sda_ticks : t_rise_scl_ticks;
     device->t_hold_ticks = t_worst_rise_ticks > user_defined_hold_ticks ? t_worst_rise_ticks : user_defined_hold_ticks; /* use higher value between worst rise time and user defined hold ticks for stable timing */
-
+     
     device->actual_freq_hz = CPU_CLOCK_FREQ_HZ / ((device->t_hold_ticks * 2) + t_worst_rise_ticks);/* calculate actual frequency based on adaptive timing setup */
-
+    device->t_rise_us = BB_TICKS_TO_US(t_worst_rise_ticks); /* calculate worst rise time in microseconds for debugging and performance monitoring purposes */
 }
 
 bool i2c_bb_write(i2c_bb_device_t *device, const uint8_t *data, uint32_t len, bool write_stop)
