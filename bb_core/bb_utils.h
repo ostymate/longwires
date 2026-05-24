@@ -19,10 +19,6 @@
 #define NULL ((void *)0)
 #endif
 
-#ifndef gpio_pin_t
-#define gpio_pin_t uint32_t
-#endif
-
 #define BB_TICKS_PER_US (CPU_CLOCK_FREQ_HZ / 1000000UL)
 
 #define BB_US_TO_TICKS(US) ((uint32_t)(US) * BB_TICKS_PER_US)
