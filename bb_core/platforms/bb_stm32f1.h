@@ -1,16 +1,27 @@
 /**
  * @file bb_stm32f1.h
- * @brief STM32F1xx specific GPIO and timing functions for the longwires library.
+ * @brief STM32F1xx specific GPIO and timing functions for the longwires library. 
+ * This header defines the GPIO pin structure and functions for configuring and manipulating GPIO pins on STM32F1xx microcontrollers, 
+ * as well as timing functions for adaptive I2C communication. 
+ * The implementation ensures that the longwires library can perform bit-banging I2C communication reliably on STM32F1xx devices,
+ * even with long wires and slow peripherals, by measuring rise times and adjusting hold times accordingly. 
+ * This file is essential for enabling the longwires library to work effectively on STM32F1xx platforms, 
+ * providing the necessary hardware abstraction for GPIO control and timing management.
  */
 
 #pragma once
 
 #include <stm32f1xx.h>
 
+/**
+ * @brief GPIO pin descriptor for STM32.
+ * Bundles a GPIO port pointer and pin number.
+ * @example: gpio_pin_t sda = {GPIOB, 6};
+ */
 typedef struct gpio_pin_t
 {
-    GPIO_TypeDef *GPIOx;
-    uint32_t pin;
+    GPIO_TypeDef *GPIOx; /**< GPIO port (GPIOA, GPIOB, ...) */
+    uint32_t pin;        /**< Pin number (0..15) */
 } gpio_pin_t;
 
 #define BB_GPIO_MODE_INPUT 0x0UL       // Input mode
