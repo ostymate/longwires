@@ -7,6 +7,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifndef NULL 
+#define NULL ((void *)0)
+#endif
+
 #ifdef ESP_PLATFORM
 #include "platforms/bb_esp32.h"
 #endif /* ESP_PLATFORM */
