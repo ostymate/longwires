@@ -74,8 +74,34 @@ void app_main(void)
 
 ```  
 
-***STM32F1 PlatformIO***
+***STM32F1 PlatformIO with cmsis framework***
 ```C
+
+#include "sht3x.h"
+#include "stdio.h"
+
+gpio_pin_t SDA = {.GPIOx = GPIOB, .pin = 6};
+gpio_pin_t SCL = {.GPIOx = GPIOB, .pin = 7};
+
+sht3x_sensor_t sensor;
+
+int main(void)
+{
+
+    sht3x_init(&sensor, SDA, SCL, true); // true - set default sht3x addr (0x44), false - set alt addr (0x45)
+
+    while (1)
+    {
+        sht3x_read(&sensor, 0, 0);
+        printf("temp_x10: %d, hum: %d, is_active: %d\n", sensor.temp_x10, sensor.hum, sensor.is_active);
+        printf("I2C Read Speed: %lu bps, I2C Write Speed: %lu bps\n", sensor.i2c_bb_device.bits_per_second_read, sensor.i2c_bb_device.bits_per_second_write);
+        printf("Total Errors: %lu, Total Successes: %lu\n", sensor.error_count, sensor.success_count);
+        printf("rise time: %lu us, hold ticks: %lu\n", sensor.i2c_bb_device.t_rise_us, sensor.i2c_bb_device.t_hold_ticks);
+        printf("actual freq: %lu Hz, target freq: %lu Hz\n", sensor.i2c_bb_device.actual_freq_hz, sensor.i2c_bb_device.freq_hz);
+        BB_DELAY_US(1000000000UL); // 1 second
+    }
+}
+
 
 ```
 
