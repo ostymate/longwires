@@ -205,7 +205,7 @@ bool i2c_bb_write(i2c_bb_device_t *device, const uint8_t *data, uint32_t len, bo
     BB_GET_TICKS(end_tick);
     uint32_t elapsed_ticks = end_tick - start_tick;
 
-    device->bits_per_second = (device->bits_per_second + len * 8UL * CPU_CLOCK_FREQ_HZ / elapsed_ticks) / 2UL; /* calculate bits per second based on total bits sent and elapsed time. */
+    device->bits_per_second_write = (device->bits_per_second_write + len * 8UL * CPU_CLOCK_FREQ_HZ / elapsed_ticks) / 2UL; /* calculate bits per second based on total bits sent and elapsed time. */
 
     return true;
 }
@@ -229,7 +229,7 @@ bool i2c_bb_read(i2c_bb_device_t *device, uint8_t *buffer, uint32_t len, bool re
 
     BB_GET_TICKS(end_tick);
     uint32_t elapsed_ticks = end_tick - start_tick;
-    device->bits_per_second = (device->bits_per_second + len * 8UL * CPU_CLOCK_FREQ_HZ / elapsed_ticks) / 2UL; /* calculate bits per second based on total bits read and elapsed time. */
+    device->bits_per_second_read = (device->bits_per_second_read + len * 8UL * CPU_CLOCK_FREQ_HZ / elapsed_ticks) / 2UL; /* calculate bits per second based on total bits read and elapsed time. */
 
     return true;
 }
@@ -253,7 +253,8 @@ void i2c_bb_init(i2c_bb_device_t *device)
     BB_GPIO_PIN_SET(device->sda_pin);
     BB_GPIO_PIN_SET(device->scl_pin);
     setup_adaptive_timing(device);
-    device->bits_per_second = 0;
+    device->bits_per_second_write = 0;
+    device->bits_per_second_read = 0;
 }
 
 bool i2c_bb_device_available(i2c_bb_device_t *device)
