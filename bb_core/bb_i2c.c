@@ -1,3 +1,14 @@
+/**
+ * @file bb_i2c.c
+ * @brief Bit-banged I2C implementation with adaptive timing for long wires and slow devices, 
+ * including clock stretching support and performance monitoring features.
+ * This implementation provides robust I2C communication by dynamically adjusting timing parameters based on actual signal rise times,
+ * ensuring reliable operation even in challenging conditions. 
+ * It also includes features for monitoring the effective data transfer rates and timing characteristics, 
+ * which can be useful for debugging and optimizing performance. 
+ * The code is designed to be portable and can be adapted to various platforms by implementing the required GPIO and timing macros/functions.
+ */
+
 
 #include "bb_i2c.h"
 

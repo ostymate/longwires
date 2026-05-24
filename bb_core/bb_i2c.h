@@ -2,7 +2,7 @@
  * @file bb_i2c.h
  * @brief adaptive software bitbang I2C implementation with clock stretching support
  * @warning It's blocking! Be careful if set to low frequency
- *
+ * 
  * Features:
  * Software I2C master mode 
  * Bitbang only. no hardware I2C support needed
