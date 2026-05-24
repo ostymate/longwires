@@ -9,8 +9,6 @@
 #include <esp32/rom/gpio.h>
 #include <esp_private/esp_clk.h>
 
-#define gpio_pin_t uint32_t
-
 static inline void bb_gpio_configure_pin(uint32_t pin, gpio_mode_t mode)
 {
     gpio_config_t io_conf = {

@@ -7,10 +7,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifndef NULL 
-#define NULL ((void *)0)
-#endif
-
 #ifdef ESP_PLATFORM
 #include "platforms/bb_esp32.h"
 #endif /* ESP_PLATFORM */
@@ -18,6 +14,14 @@
 #ifdef STM32F1
 #include "platforms/bb_stm32f1.h"
 #endif /* STM32F1 */
+
+#ifndef NULL 
+#define NULL ((void *)0)
+#endif
+
+#ifndef gpio_pin_t
+#define gpio_pin_t uint32_t
+#endif
 
 #define BB_TICKS_PER_US (CPU_CLOCK_FREQ_HZ / 1000000UL)
 
