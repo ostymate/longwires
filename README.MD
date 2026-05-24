@@ -14,6 +14,33 @@
 - Fixed-point data – No floating point overhead (optional float support for SHT3X)
 - Platform abstraction – Clean separation between core logic and hardware
 
+## Adaptive Timing
+
+The library measures actual SDA/SCL rise time on every transaction
+and adjusts frequency automatically. This means:
+
+* **Any pull-up resistors work** — 1 kΩ, 4.7 kΩ, 10 kΩ, mismatched
+  between SDA and SCL, or even the weak internal pull-ups inside
+  the sensor (typically ~50 kΩ). No code changes needed.
+
+* **Asymmetric lines are fine** — different pull-up values on SDA
+  and SCL, different wire lengths. The worst-case rise time
+  determines the safe frequency for both.
+
+* **No master-side pull-ups required** — if your sensor already has
+  pull-ups on its board, just connect directly.
+  The library adapts.
+
+* **Hot-plug safe** — pull-ups can be changed during operation.
+  The library recovers on the next transaction with updated timing.
+
+* **User-defined ceiling** — `freq_hz` sets the maximum frequency.
+  The library will never exceed it, but will drop lower if the
+  physical line demands it (long wires, weak pull-ups, high capacitance).
+
+The result: you stop thinking about I2C bus timing and just wire
+things up. The library figures out the rest.
+
 # Supported MCU
     - ESP32 (Xtensa and RISC-V based) 
     - STM32F1 
