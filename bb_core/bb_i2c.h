@@ -25,11 +25,10 @@
  * @param scl_pin SCL pin (Also needs OD with input-output)
  * @param addr I2C device address
  * @param freq_hz user defined I2C device frequency
- * @param actual_freq_hz actual I2C frequency based on adaptive timing setup (for debugging and performance monitoring purposes)
- * @param bits_per_second_write average payload bits per second (calculated during write transactions) without start/stop bits and ACK/NACK bits (for debugging and performance monitoring purposes)
- * @param bits_per_second_read average payload bits per second (calculated during read transactions) without start/stop bits and ACK/NACK bits (for debugging and performance monitoring purposes)
- * @param t_hold_ticks adaptive delay ticks for half clock period (delay is processed after each level change to provide stable timing even with long wires and slow devices)
- * @param t_rise_us measured worst rise time (SDA and SCL) in microseconds (for debugging and performance monitoring purposes)
+ * @param actual_freq_hz actual I2C frequency based on adaptive timing setup 
+ * @param t_hold_ticks adaptive delay ticks for half clock period 
+ * @param t_rise_sda_ticks measured rise time for SDA line in ticks 
+ * @param t_rise_scl_ticks measured rise time for SCL line in ticks 
  * @warning if freq_hz is set to 0, default frequency will be used (100kHz)
  */
 typedef struct i2c_bb_device_t
@@ -39,10 +38,9 @@ typedef struct i2c_bb_device_t
     uint8_t addr;
     uint32_t freq_hz;
     uint32_t actual_freq_hz;
-    uint32_t bits_per_second_write;
-    uint32_t bits_per_second_read;
     uint32_t t_hold_ticks;
-    uint32_t t_rise_us; 
+    uint32_t t_rise_sda_ticks;
+    uint32_t t_rise_scl_ticks;
 } i2c_bb_device_t;
 
 /**
