@@ -7,7 +7,7 @@ static const uint8_t sht3x_high_rep_cmd[] = {0x2C, 0x06};
 #define SHT3X_VALID_TEMP_X10_MIN_C -400 /* MIN valid -40°C */
 #define SHT3X_VALID_TEMP_X10_MAX_C 1250 /* MAX valid 125°C */
 
-/*Pre-calcuted crc8 table for 0x31 polynominal */
+/*Pre-calculated crc8 table for 0x31 polynominal */
 static const uint8_t crc8_table_poly_0x31[256] = {
     0x00, 0x31, 0x62, 0x53, 0xC4, 0xF5, 0xA6, 0x97, 0xB9, 0x88, 0xDB, 0xEA, 0x7D, 0x4C, 0x1F, 0x2E,
     0x43, 0x72, 0x21, 0x10, 0x87, 0xB6, 0xE5, 0xD4, 0xFA, 0xCB, 0x98, 0xA9, 0x3E, 0x0F, 0x5C, 0x6D,
@@ -43,14 +43,18 @@ static bool sht3x_check_crc(const uint8_t *raw_data)
     return (temp_crc == raw_data[2]) && (hum_crc == raw_data[5]);
 }
 
+static bool sht3x_error(sht3x_sensor_t *sensor)
+{
+    sensor->error_count++;
+    sensor->is_active = false;
+    return false;
+}
 
 void sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool default_addr)
 {
-    sensor->i2c_bb_device.addr = default_addr ?  SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR;
-    sensor->i2c_bb_device.freq_hz = SHT3X_DEFAULT_FREQ;
-    sensor->i2c_bb_device.sda_pin = sda_pin;
-    sensor->i2c_bb_device.scl_pin = scl_pin;
-    i2c_bb_init(&sensor->i2c_bb_device);
+    if (!sensor)
+        return;
+    i2c_bb_init(&sensor->i2c_bb_device, sda_pin, scl_pin, (default_addr ? SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR));
     sensor->error_count = 0;
     sensor->success_count = 0;
     sensor->is_active = false;
@@ -62,14 +66,15 @@ bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
         return false;
 
     uint8_t raw_data[6] = {0};
-    bool success = i2c_bb_transaction(&sensor->i2c_bb_device,
-                                      sht3x_high_rep_cmd,
-                                      sizeof(sht3x_high_rep_cmd),
-                                      raw_data, sizeof(raw_data),
-                                      true,
-                                      true);
 
-    success &= sht3x_check_crc(raw_data);
+    if (!i2c_bb_write(&sensor->i2c_bb_device, sht3x_high_rep_cmd, sizeof(sht3x_high_rep_cmd), true))
+        return sht3x_error(sensor);
+
+    if (!i2c_bb_read(&sensor->i2c_bb_device, raw_data, sizeof(raw_data), true))
+        return sht3x_error(sensor);
+
+    if (!sht3x_check_crc(raw_data))
+        return sht3x_error(sensor);
 
     /* SHT3X_RAW_DATA_STRUCTURE[] = {TEMP_MSB, TEMP_LSB, TEMP_CRC, HUM_MSB, HUM_LSB, HUM_CRC}; */
     uint32_t raw_temp = ((raw_data[0] << 8) | raw_data[1]);
@@ -78,26 +83,19 @@ bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
     int16_t temp_x10 = (1750UL * raw_temp / 65535UL - 450UL); /* SHT3x datasheet formula modified to fixed point */
     uint8_t hum = (100UL * raw_hum / 65535UL);
 
-    success &= temp_x10 >= SHT3X_VALID_TEMP_X10_MIN_C;
-    success &= temp_x10 <= SHT3X_VALID_TEMP_X10_MAX_C;
-    success &= hum <= 100;
+    if (temp_x10 < SHT3X_VALID_TEMP_X10_MIN_C || temp_x10 > SHT3X_VALID_TEMP_X10_MAX_C || hum > 100)
+        return sht3x_error(sensor);
 
-    if (success)
-    {
-        sensor->success_count++;
-        sensor->is_active = true;
-        sensor->temp_x10 = temp_x10;
-        sensor->hum = hum;
-        if (temperature)
-            *temperature = 175.0f * (float)raw_temp / 65535.0f - 45.0f; /* original sht3x datasheet formula */
-        if (humidity)
-            *humidity = 100.0f * (float)raw_hum / 65535.0f;
-    }
-    else
-    {
-        sensor->error_count++;
-        sensor->is_active = false;
-    }
+    
+    sensor->temp_x10 = temp_x10;
+    sensor->hum = hum;
+    sensor->success_count++;
+    sensor->is_active = true;
+    
+    if (temperature)
+        *temperature = 175.0f * (float)raw_temp / 65535.0f - 45.0f; /* original sht3x datasheet formula */
+    if (humidity)
+        *humidity = 100.0f * (float)raw_hum / 65535.0f;
 
-    return success;
+    return true;
 }

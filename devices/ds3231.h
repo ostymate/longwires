@@ -6,7 +6,6 @@
 #include "../bb_core/bb_i2c.h"
 
 #define DS3231_DEFAULT_ADDR 0x68
-#define DS3231_DEFAULT_FREQ_HZ 100000
 
 /**
  * @brief DS3231 RTC device
@@ -17,7 +16,7 @@
  * @param month 1-12
  * @param year 2000 - 2100
  * @param is_time_valid true if last updating or receiving time was successful, false otherwise 
- * @param ds3231_i2c_device i2c device struct
+ * @param i2c_bb_device i2c device struct
  * 
  */
 typedef struct
@@ -29,7 +28,7 @@ typedef struct
     uint8_t month;
     uint16_t year;
     bool is_time_valid;
-    i2c_bb_device_t ds3231_i2c_device;
+    i2c_bb_device_t i2c_bb_device;
 } ds3231_t;
 
 /**
@@ -39,7 +38,7 @@ typedef struct
  * @param scl_pin I2C bus SCL pin 
  * @param i2c_freq set ds3231 device frequency
  */
-void ds3231_init(ds3231_t *ds3231, gpio_pin_t sda_pin, gpio_pin_t scl_pin, uint32_t i2c_freq);
+void ds3231_init(ds3231_t *ds3231, gpio_pin_t sda_pin, gpio_pin_t scl_pin);
 
 /**
  * @brief get time and date from rtc 

@@ -10,7 +10,6 @@
 // Default values
 #define SHT3X_DEFAULT_ADDR 0x44
 #define SHT3X_ALT_ADDR 0x45
-#define SHT3X_DEFAULT_FREQ 100000
 
 /**
  * @brief SHT3X sensor
