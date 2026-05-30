@@ -7,7 +7,7 @@
 # Features
 
 - Pure software bitbang – No hardware I2C/1-Wire peripheral needed
-- Wide I2C frequency range – 1 Hz to 1 MHz+ 
+- Automatic frequency adaptation – up to 100 kHz, slows down as the line demands
 - Long distance wiring (tested 100 meters twisted pair)
 - Clock stretching support – Handles slow slave devices with configurable timeout
 - Non-blocking DS18B20 – State machine based, doesn't block your main loop
@@ -33,10 +33,6 @@ and adjusts frequency automatically. This means:
 
 * **Hot-plug safe** — pull-ups can be changed during operation.
   The library recovers on the next transaction with updated timing.
-
-* **User-defined ceiling** — `freq_hz` sets the maximum frequency.
-  The library will never exceed it, but will drop lower if the
-  physical line demands it (long wires, weak pull-ups, high capacitance).
 
 The result: you stop thinking about I2C bus timing and just wire
 things up. The library figures out the rest.
@@ -93,7 +89,6 @@ void app_main(void)
         printf("Temperature: %.1f C, Humidity: %.1f%%\n", temperature, humidity);
         printf("Success count: %lu, Error count: %lu\n", sensor.success_count, sensor.error_count);
         printf("Sensor is %s\n", sensor.is_active ? "active" : "inactive");
-        printf("actual_freq_hz: %lu\n", sensor.i2c_bb_device.actual_freq_hz); // Print the actual I2C frequency for debugging
         vTaskDelay(pdMS_TO_TICKS(1000));
 
     }
@@ -121,11 +116,8 @@ int main(void)
     {
         sht3x_read(&sensor, 0, 0);
         printf("temp_x10: %d, hum: %d, is_active: %d\n", sensor.temp_x10, sensor.hum, sensor.is_active);
-        printf("I2C Read Speed: %lu bps, I2C Write Speed: %lu bps\n", sensor.i2c_bb_device.bits_per_second_read, sensor.i2c_bb_device.bits_per_second_write);
         printf("Total Errors: %lu, Total Successes: %lu\n", sensor.error_count, sensor.success_count);
-        printf("rise time: %lu us, hold ticks: %lu\n", sensor.i2c_bb_device.t_rise_us, sensor.i2c_bb_device.t_hold_ticks);
-        printf("actual freq: %lu Hz, target freq: %lu Hz\n", sensor.i2c_bb_device.actual_freq_hz, sensor.i2c_bb_device.freq_hz);
-        BB_DELAY_US(1000000000UL); // 1 second
+        BB_DELAY_US(1000000UL); // 1 second
     }
 }
 
@@ -135,4 +127,4 @@ int main(void)
 
 
 ## why?
-because hardware I2C can't handle 100 meters of twisted pair or communicate with I2C sensors with adaptive frequency
+because hardware I2C peripherals give up when the line capacitance is too high, the pull-ups are wrong, or the slave needs clock stretching. This library doesn't.
