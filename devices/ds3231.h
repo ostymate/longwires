@@ -36,7 +36,6 @@ typedef struct
  * @param ds3231 RTC device 
  * @param sda_pin I2C bus SDA pin
  * @param scl_pin I2C bus SCL pin 
- * @param i2c_freq set ds3231 device frequency
  */
 void ds3231_init(ds3231_t *ds3231, gpio_pin_t sda_pin, gpio_pin_t scl_pin);
 
