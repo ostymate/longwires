@@ -24,6 +24,7 @@
  * @param scl_pin SCL pin (the same requirements as for SDA pin)
  * @param addr I2C device address (7-bit)
  * @param t_hold_ticks adaptive timing based on line measurement. do not modify
+ * @param timeout_ticks scl/sda common rise timeout including clock stretch (25ms default). 
  */
 typedef struct i2c_bb_device_t
 {
@@ -31,6 +32,7 @@ typedef struct i2c_bb_device_t
     gpio_pin_t scl_pin;
     uint8_t addr;
     uint32_t t_hold_ticks;
+    uint32_t timeout_ticks;
 } i2c_bb_device_t;
 
 /**
