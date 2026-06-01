@@ -90,7 +90,7 @@ bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
     if (!wait_release(dev->scl_pin, dev->timeout_ticks))
         return false;
 
-    bool ack = !wait_release(dev->sda_pin, dev->timeout_ticks);
+    bool ack = !wait_release(dev->sda_pin, dev->t_hold_ticks);
 
     set_level(dev->scl_pin, LOW, dev->t_hold_ticks);
     return ack;
@@ -124,7 +124,7 @@ bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
 
 void clean_bus(i2c_bb_device_t *dev)
 {
-	  BB_GPIO_PIN_SET(dev->sda_pin);
+	BB_GPIO_PIN_SET(dev->sda_pin);
 	
     for (uint32_t i = 0; i < CLEAN_BUS_MAX_ATTEMPTS; i++)
     {
@@ -142,6 +142,8 @@ void setup_adaptive_timing(i2c_bb_device_t *dev)
     dev->timeout_ticks = BB_US_TO_TICKS(I2C_BB_RISE_TIMEOUT_US);
     dev->t_hold_ticks  = BB_US_TO_TICKS(I2C_BB_MIN_HOLD_US);
 
+    clean_bus(dev);
+	
     /* Both LOW first */
 	  set_level(dev->scl_pin, LOW, dev->t_hold_ticks);
     set_level(dev->sda_pin, LOW, dev->t_hold_ticks);
@@ -159,6 +161,8 @@ void setup_adaptive_timing(i2c_bb_device_t *dev)
     scl_rise = end - start;
 
     dev->t_hold_ticks = (sda_rise > scl_rise ? sda_rise : scl_rise);
+	
+	clean_bus(dev);
 }
 
 bool i2c_bb_write(i2c_bb_device_t *dev, const uint8_t *data, uint32_t len, bool stop)
