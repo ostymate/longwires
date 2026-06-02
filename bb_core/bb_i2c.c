@@ -12,25 +12,6 @@
 #define HIGH_LEVEL_CONFIRMATION_SAMPLES_COUNT 5
 #define CLEAN_BUS_SCL_CYCLES 9
 
-static void i2c_bb_start(i2c_bb_device_t *dev)
-{
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_RESET(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_RESET(dev->scl);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-}
-
-static void i2c_bb_stop(i2c_bb_device_t *dev)
-{
-    BB_GPIO_PIN_RESET(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_SET(dev->scl);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_SET(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-}
-
 static bool detect_high(gpio_pin_t pin, uint32_t timeout_ticks)
 {
     uint32_t start_tick, current_tick;
@@ -47,6 +28,27 @@ static bool detect_high(gpio_pin_t pin, uint32_t timeout_ticks)
         if ((current_tick - start_tick) >= timeout_ticks)
             return false;
     }
+}
+
+static void i2c_bb_start(i2c_bb_device_t *dev)
+{
+    detect_high(dev->scl, dev->timeout_ticks);
+    detect_high(dev->sda, dev->timeout_ticks);    
+    BB_DELAY_TICKS(dev->t_hold_ticks);
+    BB_GPIO_PIN_RESET(dev->sda);
+    BB_DELAY_TICKS(dev->t_hold_ticks);
+    BB_GPIO_PIN_RESET(dev->scl);
+    BB_DELAY_TICKS(dev->t_hold_ticks);
+}
+
+static void i2c_bb_stop(i2c_bb_device_t *dev)
+{
+    BB_GPIO_PIN_RESET(dev->sda);
+    BB_DELAY_TICKS(dev->t_hold_ticks);
+    BB_GPIO_PIN_SET(dev->scl);
+    BB_DELAY_TICKS(dev->t_hold_ticks);
+    BB_GPIO_PIN_SET(dev->sda);
+    BB_DELAY_TICKS(dev->t_hold_ticks);
 }
 
 static void clean_bus(i2c_bb_device_t *dev)
