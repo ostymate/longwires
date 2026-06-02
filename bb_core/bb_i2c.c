@@ -119,11 +119,7 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
 
         /* release SCL and wait HIGH processing clock stretch*/
         if (!detect_high(dev->scl, dev->timeout_ticks))
-        {
-            setup_adaptive_timing(dev);
             return false;
-        }
-
         BB_DELAY_TICKS(dev->t_hold_ticks);
 
         /*SCL LOW for next bit*/
@@ -131,23 +127,17 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
         BB_DELAY_TICKS(dev->t_hold_ticks);
     }
 
-    /* release lines for ACK */
+    /* release SDA for ACK / NACK */
     BB_GPIO_PIN_SET(dev->sda);
-    BB_GPIO_PIN_SET(dev->scl);
+    BB_DELAY_TICKS(dev->t_hold_ticks);
 
-    /* process clock stretch bebore ACK */
+    /* process clock stretch before ACK / NACK */
     if (!detect_high(dev->scl, dev->timeout_ticks))
-    {
-        setup_adaptive_timing(dev);
         return false;
-    }
 
     /* HIGH == NACK */
     if (detect_high(dev->sda, dev->t_hold_ticks))
-    {
-        setup_adaptive_timing(dev);
         return false;
-    }
 
     /* SCL LOW for next byte */
     BB_GPIO_PIN_RESET(dev->scl);
@@ -159,20 +149,21 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
 static bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
 {
     *buf = 0;
-    BB_GPIO_PIN_SET(dev->sda);
 
+    /* release SDA before reading */ 
+    BB_GPIO_PIN_SET(dev->sda);
+    BB_DELAY_TICKS(dev->t_hold_ticks);
+    
     for (uint32_t bit = 8; bit--;)
     {
         /* process clock stretch */
         if (!detect_high(dev->scl, dev->timeout_ticks))
-        {
-            setup_adaptive_timing(dev);
             return false;
-        }
 
         /* read current bit */
         *buf |= (detect_high(dev->sda, dev->t_hold_ticks) << bit);
-
+        BB_DELAY_TICKS(dev->t_hold_ticks);
+        
         /* set SCL LOW for next bit */
         BB_GPIO_PIN_RESET(dev->scl);
         BB_DELAY_TICKS(dev->t_hold_ticks);
@@ -184,10 +175,7 @@ static bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
 
     /* release SCL and process clock stretch */
     if (!detect_high(dev->scl, dev->timeout_ticks))
-    {
-        setup_adaptive_timing(dev);
         return false;
-    }
 
     /*SCL LOW for next byte */
     BB_GPIO_PIN_RESET(dev->scl);
