@@ -9,36 +9,48 @@
 
 #define I2C_BB_RISE_TIMEOUT_US 25000
 #define I2C_BB_MIN_HOLD_US 5
-#define HIGH_LEVEL_CONFIRMATION_SAMPLES_COUNT 5
+#define LEVEL_CONFIRMATION_SAMPLES_COUNT 5
 #define CLEAN_BUS_SCL_CYCLES 9
 
 static bool detect_high(gpio_pin_t pin, uint32_t timeout_ticks)
 {
-    uint32_t start_tick, current_tick;
+    uint32_t start_tick, current_tick, low_samples = 0;
 
     BB_GET_TICKS(start_tick);
-    BB_GPIO_PIN_SET(pin);
     while (1)
     {
         BB_GET_TICKS(current_tick);
 
         if (BB_GPIO_PIN_READ(pin))
             return true;
+        
+        low_samples++;
 
-        if ((current_tick - start_tick) >= timeout_ticks)
+        if (((current_tick - start_tick) >= timeout_ticks) && low_samples >= LEVEL_CONFIRMATION_SAMPLES_COUNT)
             return false;
     }
 }
 
-static void i2c_bb_start(i2c_bb_device_t *dev)
+static bool i2c_bb_start(i2c_bb_device_t *dev)
 {
-    detect_high(dev->scl, dev->timeout_ticks);
-    detect_high(dev->sda, dev->timeout_ticks);    
+    /* release SCL to perform repeated start if needed. slave will release SDA holded LOW after last ACK when master releases SCL*/
+    if (!detect_high(dev->sda, dev->t_hold_ticks) || !detect_high(dev->scl, dev->t_hold_ticks))
+    {
+        BB_GPIO_PIN_SET(dev->sda);
+        BB_GPIO_PIN_SET(dev->scl);
+        if (!detect_high(dev->scl, dev->timeout_ticks)) 
+            return false;
+        if (!detect_high(dev->sda, dev->timeout_ticks))
+            return false;  
+    }  
+
     BB_DELAY_TICKS(dev->t_hold_ticks);
     BB_GPIO_PIN_RESET(dev->sda);
     BB_DELAY_TICKS(dev->t_hold_ticks);
     BB_GPIO_PIN_RESET(dev->scl);
     BB_DELAY_TICKS(dev->t_hold_ticks);
+
+    return true;
 }
 
 static void i2c_bb_stop(i2c_bb_device_t *dev)
@@ -83,7 +95,7 @@ static uint32_t measure_t_hold_adaptive(gpio_pin_t pin, uint32_t timeout_ticks, 
         samples = BB_GPIO_PIN_READ(pin) ? samples + 1 : 0;
         detected_tick = samples > 1 ? detected_tick : current_tick;
 
-        if (((samples >= HIGH_LEVEL_CONFIRMATION_SAMPLES_COUNT) && ((current_tick - detected_tick) >= t_hold_ticks)) || (current_tick - start_tick) >= timeout_ticks)
+        if (((samples >= LEVEL_CONFIRMATION_SAMPLES_COUNT) && ((current_tick - detected_tick) >= t_hold_ticks)) || (current_tick - start_tick) >= timeout_ticks)
             return current_tick - start_tick;
     }
 }
@@ -120,6 +132,7 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
         BB_DELAY_TICKS(dev->t_hold_ticks);
 
         /* release SCL and wait HIGH processing clock stretch*/
+        BB_GPIO_PIN_SET(dev->scl);
         if (!detect_high(dev->scl, dev->timeout_ticks))
             return false;
         BB_DELAY_TICKS(dev->t_hold_ticks);
@@ -134,6 +147,7 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
     BB_DELAY_TICKS(dev->t_hold_ticks);
 
     /* process clock stretch before ACK / NACK */
+    BB_GPIO_PIN_SET(dev->scl);
     if (!detect_high(dev->scl, dev->timeout_ticks))
         return false;
 
@@ -159,6 +173,7 @@ static bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
     for (uint32_t bit = 8; bit--;)
     {
         /* process clock stretch */
+        BB_GPIO_PIN_SET(dev->scl);
         if (!detect_high(dev->scl, dev->timeout_ticks))
             return false;
 
@@ -176,12 +191,13 @@ static bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
     BB_DELAY_TICKS(dev->t_hold_ticks);
 
     /* release SCL and process clock stretch */
+    BB_GPIO_PIN_SET(dev->scl);
     if (!detect_high(dev->scl, dev->timeout_ticks))
         return false;
+    BB_DELAY_TICKS(dev->t_hold_ticks); 
 
     /*SCL LOW for next byte */
     BB_GPIO_PIN_RESET(dev->scl);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
 
     return true;
 }
@@ -190,7 +206,8 @@ bool i2c_bb_write(i2c_bb_device_t *dev, const uint8_t *data, uint32_t len, bool 
 {
     setup_adaptive_timing(dev);
     
-    i2c_bb_start(dev);
+    if (!i2c_bb_start(dev))
+        return false;
 
     if (!i2c_bb_write_byte(dev, (dev->addr << 1) | 0x00))
         return false;
@@ -209,7 +226,8 @@ bool i2c_bb_write(i2c_bb_device_t *dev, const uint8_t *data, uint32_t len, bool 
 
 bool i2c_bb_read(i2c_bb_device_t *dev, uint8_t *buf, uint32_t len, bool stop)
 {
-    i2c_bb_start(dev);
+    if (!i2c_bb_start(dev))
+        return false;
 
     if (!i2c_bb_write_byte(dev, (dev->addr << 1) | 0x01))
         return false;
