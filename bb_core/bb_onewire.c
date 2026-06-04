@@ -42,102 +42,108 @@ static const uint8_t onewire_crc8_table[256] = {
     0x74, 0x2a, 0xc8, 0x96, 0x15, 0x4b, 0xa9, 0xf7,
     0xb6, 0xe8, 0x0a, 0x54, 0xd7, 0x89, 0x6b, 0x35};
 
-bool onewire_check_presence(gpio_pin_t data_pin)
+static inline bool wait_and_detect(const uint32_t start_tick, uint32_t *current_tick, const uint32_t end_tick, gpio_pin_t data_pin)
 {
-    uint32_t start_ticks, current_ticks;
-    uint32_t reset_ticks = BB_US_TO_TICKS(RESET_US);
-    uint32_t high_max_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_US);
-    uint32_t low_max_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_LOW_US);
-
-    BB_GPIO_PIN_RESET(data_pin);
-    BB_DELAY_TICKS(reset_ticks);
-    BB_GPIO_PIN_SET(data_pin);
-    BB_GET_TICKS(start_ticks);
-    bool presence = false;
-
-    do {
-        BB_GET_TICKS(current_ticks);
-        presence |= BB_GPIO_PIN_READ(data_pin);
-    } while (current_ticks - start_ticks < high_max_ticks);
-    if (!presence)
-        return false;
-
-    presence = false;
-
-    do {
-        BB_GET_TICKS(current_ticks);
-        presence |= (!BB_GPIO_PIN_READ(data_pin));
-    } while (current_ticks - start_ticks < (low_max_ticks + high_max_ticks));
-
-    if (!presence)
-        return false;
-
+    bool state = false;
     do
     {
-        BB_GET_TICKS(current_ticks);
-    } while ((current_ticks - start_ticks) <= reset_ticks);
+        BB_GET_TICKS(*current_tick);
+        state |= BB_GPIO_PIN_READ(data_pin);
+    } while (*current_tick - start_tick < end_tick);
+    return state;
+}
 
-    return presence;
+bool onewire_check_presence(gpio_pin_t data_pin)
+{
+    uint32_t start_tick, current_tick;
+    uint32_t reset_ticks = BB_US_TO_TICKS(RESET_US);
+    uint32_t high_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_US);
+    uint32_t low_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_LOW_US);
+    uint32_t phase_high_end = reset_ticks + high_ticks;
+    uint32_t phase_low_end = phase_high_end + low_ticks;
+    uint32_t phase_end = reset_ticks * 2;
+
+    BB_GET_TICKS(start_tick);
+    BB_GPIO_PIN_RESET(data_pin);
+    wait_and_detect(start_tick, &current_tick, reset_ticks, data_pin);
+    BB_GPIO_PIN_SET(data_pin);
+
+    if (!wait_and_detect(start_tick, &current_tick, phase_high_end, data_pin))
+        return false;
+
+    bool low_detected = false;
+    do
+    {
+        BB_GET_TICKS(current_tick);
+        low_detected |= (!BB_GPIO_PIN_READ(data_pin));
+    } while (current_tick - start_tick < phase_low_end);
+    if (!low_detected)
+        return false;
+    
+
+    wait_and_detect(start_tick, &current_tick, phase_end, data_pin);
+
+    return true;
 }
 
 void onewire_write_byte(gpio_pin_t data_pin, uint8_t data)
 {
+    uint32_t start_tick, current_tick, end_tick;
     uint32_t recovery_ticks = BB_US_TO_TICKS(RECOVERY_US);
     uint32_t bit_timeslot_ticks = BB_US_TO_TICKS(BIT_TIMESLOT_US);
+
+    BB_GET_TICKS(start_tick);
 
     for (int i = 0; i < 8; i++)
     {
         BB_GPIO_PIN_RESET(data_pin);
-        BB_DELAY_TICKS(recovery_ticks);
+
+        end_tick = recovery_ticks + (recovery_ticks + bit_timeslot_ticks) * i;
+        wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
 
         if (data & 0x01)
-        {
             BB_GPIO_PIN_SET(data_pin);
-            BB_DELAY_TICKS(bit_timeslot_ticks);
-        }
-        else
-        {
-            BB_DELAY_TICKS(bit_timeslot_ticks);
-            BB_GPIO_PIN_SET(data_pin);
-        }
 
-        BB_DELAY_TICKS(recovery_ticks);
+        end_tick += bit_timeslot_ticks;
+        wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
+
+        if (!(data & 0x01))
+            BB_GPIO_PIN_SET(data_pin);
+
+        end_tick += recovery_ticks;
+        wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
+
         data >>= 1;
     }
 }
 
 uint8_t onewire_read_byte(gpio_pin_t data_pin)
 {
-
     uint8_t data = 0;
-    uint32_t read_data_valid_ticks = BB_US_TO_TICKS(READ_DATA_VALID_US);
-    uint32_t bit_timeslot_ticks = BB_US_TO_TICKS(BIT_TIMESLOT_US);
+    uint32_t start_tick, current_tick;
     uint32_t recovery_ticks = BB_US_TO_TICKS(RECOVERY_US);
-    uint32_t start_ticks, current_ticks;
+    uint32_t read_ticks = BB_US_TO_TICKS(READ_DATA_VALID_US);
+    uint32_t bit_ticks = BB_US_TO_TICKS(BIT_TIMESLOT_US);
+    uint32_t slot_ticks = recovery_ticks + bit_ticks;
+
+    BB_GET_TICKS(start_tick);
 
     for (int i = 0; i < 8; i++)
     {
-        BB_GET_TICKS(start_ticks);
+        uint32_t slot_start = recovery_ticks + i * slot_ticks;
+        uint32_t read_end = slot_start + recovery_ticks + read_ticks;
+        uint32_t slot_end = slot_start + slot_ticks;
 
+        wait_and_detect(start_tick, &current_tick, slot_start, data_pin);
         BB_GPIO_PIN_RESET(data_pin);
-        BB_DELAY_TICKS(recovery_ticks);
+
+        wait_and_detect(start_tick, &current_tick, slot_start + recovery_ticks, data_pin);
         BB_GPIO_PIN_SET(data_pin);
-      
 
-        do {
-            BB_GET_TICKS(current_ticks);
-            if( BB_GPIO_PIN_READ(data_pin))
-            {
-               data |= (1 << i); break;
+        if (wait_and_detect(start_tick, &current_tick, read_end, data_pin))
+            data |= (1 << i);
 
-            }
-        } while (current_ticks - start_ticks < (read_data_valid_ticks + recovery_ticks));
-
-
-        do
-        {
-            BB_GET_TICKS(current_ticks);
-        } while (current_ticks - start_ticks < bit_timeslot_ticks);
+        wait_and_detect(start_tick, &current_tick, slot_end, data_pin);
     }
 
     return data;
