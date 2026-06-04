@@ -5,13 +5,11 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifdef AVR
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <stdint.h>
 
 #define gpio_pin_t uint8_t
@@ -103,8 +101,3 @@ void bb_avr_timer_init(void);
 #define CPU_CLOCK_FREQ_HZ F_CPU
 
 #endif /* AVR */
-
-
-#ifdef __cplusplus
-}
-#endif

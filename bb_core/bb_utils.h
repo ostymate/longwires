@@ -5,10 +5,6 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -47,6 +43,3 @@ static inline void bb_delay_ticks(uint32_t ticks)
 
 #define BB_DELAY_US(US) BB_DELAY_TICKS(BB_US_TO_TICKS((US)))
 
-#ifdef __cplusplus
-extern "C" }
-#endif

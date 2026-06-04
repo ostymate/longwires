@@ -2,7 +2,7 @@
   "name": "longwires",
   "version": "1.0.1",
   "build": {
-    "srcFilter": ["+<bb_core/*.c>", "+<devices/*.c>", "+<platforms/*.c"],
+    "srcFilter": ["+<bb_core/*.c>", "+<devices/*.c>", "+<platforms/*.c>"],
     "includeDir": "devices"
   }
 }
