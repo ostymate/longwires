@@ -4,16 +4,25 @@
  */
 
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 
 #ifdef ESP_PLATFORM
-#include "platforms/bb_esp32.h"
+#include "../platforms/bb_esp32.h"
 #endif /* ESP_PLATFORM */
 
 #ifdef STM32F1
-#include "platforms/bb_stm32f1.h"
+#include "../platforms/bb_stm32f1.h"
 #endif /* STM32F1 */
+
+#ifdef AVR
+#include "../platforms/bb_avr.h"
+#endif
 
 #ifndef NULL 
 #define NULL ((void *)0)
@@ -37,3 +46,7 @@ static inline void bb_delay_ticks(uint32_t ticks)
 #define BB_DELAY_TICKS(TICKS) bb_delay_ticks(TICKS)
 
 #define BB_DELAY_US(US) BB_DELAY_TICKS(BB_US_TO_TICKS((US)))
+
+#ifdef __cplusplus
+extern "C" }
+#endif

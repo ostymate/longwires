@@ -5,6 +5,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "../bb_core/bb_i2c.h"
 
 // Default values
@@ -47,3 +51,7 @@ void sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, 
  * @return true if measurement was successful, false - otherwise
  */
 bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity);
+
+#ifdef __cplusplus
+}
+#endif

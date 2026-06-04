@@ -13,6 +13,11 @@
  */
 
 #pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "bb_utils.h"
 
 /**
@@ -60,3 +65,8 @@ bool i2c_bb_write(i2c_bb_device_t *dev, const uint8_t *data, uint32_t len, bool 
  * @return true: all bytes were read successfully || false: timeout
  */
 bool i2c_bb_read(i2c_bb_device_t *dev, uint8_t *buffer, uint32_t len, bool stop);
+
+
+#ifdef __cplusplus
+}
+#endif

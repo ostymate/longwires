@@ -2,6 +2,11 @@
  * @file ds3231.h
  * @brief ds3231 RTC module driver
  */
+#pragma once 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "../bb_core/bb_i2c.h"
 
@@ -50,3 +55,7 @@ void ds3231_get_time(ds3231_t *ds3231);
  * @param ds3231 RTC device
  */
 void ds3231_set_time(ds3231_t *ds3231);
+
+#ifdef __cplusplus
+}
+#endif

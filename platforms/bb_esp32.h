@@ -5,6 +5,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef ESP_PLATFORM
+
 #include <driver/gpio.h>
 #include <esp32/rom/gpio.h>
 #include <esp_private/esp_clk.h>
@@ -43,3 +49,10 @@ static inline void bb_gpio_configure_pin(uint32_t pin, gpio_mode_t mode)
 #define CPU_CLOCK_FREQ_HZ (esp_clk_cpu_freq())
 
 #define BB_TICKS_SOURCE_INIT() {}
+
+#endif /* ESP_PLATFORM */
+
+
+#ifdef __cplusplus
+}
+#endif

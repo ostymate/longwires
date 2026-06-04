@@ -4,6 +4,10 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "bb_utils.h"
 
 // common onewire commands
@@ -37,3 +41,8 @@ uint8_t onewire_read_byte(gpio_pin_t data_pin);
  * @param len data size
  */
 uint8_t onewire_crc8(const uint8_t *data, uint32_t len);
+
+
+#ifdef __cplusplus
+}
+#endif

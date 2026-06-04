@@ -11,6 +11,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef STM32F1
+
 #include <stm32f1xx.h>
 
 /**
@@ -66,3 +72,9 @@ static inline void bb_gpio_configure_pin(GPIO_TypeDef *GPIOx, uint32_t pin, uint
 #define BB_GET_TICKS(TICKS) (TICKS = DWT->CYCCNT)
 
 #define CPU_CLOCK_FREQ_HZ (SystemCoreClock)
+
+#endif /* STM32F1 */
+
+#ifdef __cplusplus
+extern "C" }
+#endif
