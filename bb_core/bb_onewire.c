@@ -1,10 +1,8 @@
 #include "bb_onewire.h"
 
 // one wire timings
-#define PRESENCE_DETECT_HIGH_MIN_US 15
-#define PRESENCE_DETECT_HIGH_MAX_US 60
-#define PRESENCE_DETECT_LOW_MIN_US 60
-#define PRESENCE_DETECT_LOW_MAX_US 240
+#define PRESENCE_DETECT_HIGH_US 60
+#define PRESENCE_DETECT_LOW_US 240
 #define RESET_US 480
 #define RECOVERY_US 1
 #define BIT_TIMESLOT_US 120
@@ -44,51 +42,35 @@ static const uint8_t onewire_crc8_table[256] = {
     0x74, 0x2a, 0xc8, 0x96, 0x15, 0x4b, 0xa9, 0xf7,
     0xb6, 0xe8, 0x0a, 0x54, 0xd7, 0x89, 0x6b, 0x35};
 
-static bool onewire_compare_level(gpio_pin_t data_pin, uint32_t level_min_ticks, uint32_t level_max_ticks, uint32_t expected_level)
-{
-    uint32_t start_ticks, current_ticks;
-    uint32_t success = 0, error = 0;
-    BB_GET_TICKS(start_ticks);
-
-    do
-    {
-        if (BB_GPIO_PIN_READ(data_pin) == expected_level)
-            success += 1;
-        else
-            error += 1;
-        BB_GET_TICKS(current_ticks);
-
-    } while ((current_ticks - start_ticks) <= level_min_ticks);
-
-    do
-    {
-        if (BB_GPIO_PIN_READ(data_pin) != expected_level)
-            break;
-        else
-            success += 1;
-        BB_GET_TICKS(current_ticks);
-    } while ((current_ticks - start_ticks) <= level_max_ticks);
-
-    return (success > error);
-}
-
 bool onewire_check_presence(gpio_pin_t data_pin)
 {
     uint32_t start_ticks, current_ticks;
     uint32_t reset_ticks = BB_US_TO_TICKS(RESET_US);
-    uint32_t high_min_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_MIN_US);
-    uint32_t high_max_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_MAX_US);
-    uint32_t low_min_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_LOW_MIN_US);
-    uint32_t low_max_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_LOW_MAX_US);
+    uint32_t high_max_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_US);
+    uint32_t low_max_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_LOW_US);
 
     BB_GPIO_PIN_RESET(data_pin);
     BB_DELAY_TICKS(reset_ticks);
     BB_GPIO_PIN_SET(data_pin);
-
     BB_GET_TICKS(start_ticks);
+    bool presence = false;
 
-    bool presence = onewire_compare_level(data_pin, high_min_ticks, high_max_ticks, 1);
-    presence &= onewire_compare_level(data_pin, low_min_ticks, low_max_ticks, 0);
+    do {
+        BB_GET_TICKS(current_ticks);
+        presence |= BB_GPIO_PIN_READ(data_pin);
+    } while (current_ticks - start_ticks < high_max_ticks);
+    if (!presence)
+        return false;
+
+    presence = false;
+
+    do {
+        BB_GET_TICKS(current_ticks);
+        presence |= (!BB_GPIO_PIN_READ(data_pin));
+    } while (current_ticks - start_ticks < (low_max_ticks + high_max_ticks));
+
+    if (!presence)
+        return false;
 
     do
     {
@@ -140,9 +122,17 @@ uint8_t onewire_read_byte(gpio_pin_t data_pin)
         BB_GPIO_PIN_RESET(data_pin);
         BB_DELAY_TICKS(recovery_ticks);
         BB_GPIO_PIN_SET(data_pin);
+      
 
-        if (onewire_compare_level(data_pin, read_data_valid_ticks, read_data_valid_ticks, 1))
-            data |= (1 << i);
+        do {
+            BB_GET_TICKS(current_ticks);
+            if( BB_GPIO_PIN_READ(data_pin))
+            {
+               data |= (1 << i); break;
+
+            }
+        } while (current_ticks - start_ticks < (read_data_valid_ticks + recovery_ticks));
+
 
         do
         {
