@@ -4,9 +4,12 @@
 #define PRESENCE_DETECT_HIGH_US 60
 #define PRESENCE_DETECT_LOW_US 240
 #define RESET_US 480
-#define RECOVERY_US 1
+#define PRESENCE_US 960
 #define BIT_TIMESLOT_US 120
+#define LOW_0_US 60 /* time to hold bus LOW to write 0 */
+#define LOW_1_US 1  /* time to hold bus HIGH to write 1 */
 #define READ_DATA_VALID_US 15
+#define RECOVERY_US 1
 
 static const uint8_t onewire_crc8_table[256] = {
     0x00, 0x5e, 0xbc, 0xe2, 0x61, 0x3f, 0xdd, 0x83,
@@ -42,108 +45,110 @@ static const uint8_t onewire_crc8_table[256] = {
     0x74, 0x2a, 0xc8, 0x96, 0x15, 0x4b, 0xa9, 0xf7,
     0xb6, 0xe8, 0x0a, 0x54, 0xd7, 0x89, 0x6b, 0x35};
 
-static inline bool wait_and_detect(const uint32_t start_tick, uint32_t *current_tick, const uint32_t end_tick, gpio_pin_t data_pin)
-{
-    bool state = false;
-    do
-    {
-        BB_GET_TICKS(*current_tick);
-        state |= BB_GPIO_PIN_READ(data_pin);
-    } while (*current_tick - start_tick < end_tick);
-    return state;
-}
-
 bool onewire_check_presence(gpio_pin_t data_pin)
 {
-    uint32_t start_tick, current_tick;
-    uint32_t reset_ticks = BB_US_TO_TICKS(RESET_US);
-    uint32_t high_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_US);
-    uint32_t low_ticks = BB_US_TO_TICKS(PRESENCE_DETECT_LOW_US);
-    uint32_t phase_high_end = reset_ticks + high_ticks;
-    uint32_t phase_low_end = phase_high_end + low_ticks;
-    uint32_t phase_end = reset_ticks * 2;
+    uint32_t start, current;
+    uint32_t reset_end = BB_US_TO_TICKS(RESET_US);
+    uint32_t high_end = reset_end + BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_US);
+    uint32_t low_end = high_end + BB_US_TO_TICKS(PRESENCE_DETECT_LOW_US);
+    uint32_t presence_end = BB_US_TO_TICKS(PRESENCE_US);
 
-    BB_GET_TICKS(start_tick);
+    BB_GET_TICKS(start);
+
     BB_GPIO_PIN_PULL_DOWN(data_pin);
-    wait_and_detect(start_tick, &current_tick, reset_ticks, data_pin);
+    do
+    {
+        BB_GET_TICKS(current);
+    } while (current - start < reset_end);
     BB_GPIO_PIN_HIGH_Z(data_pin);
 
-    if (!wait_and_detect(start_tick, &current_tick, phase_high_end, data_pin))
+    bool high_detected = false;
+    do
+    {
+        BB_GET_TICKS(current);
+        high_detected |= BB_GPIO_PIN_READ(data_pin);
+    } while (current - start < high_end);
+    if (!high_detected)
         return false;
 
     bool low_detected = false;
     do
     {
-        BB_GET_TICKS(current_tick);
+        BB_GET_TICKS(current);
         low_detected |= (!BB_GPIO_PIN_READ(data_pin));
-    } while (current_tick - start_tick < phase_low_end);
+    } while (current - start < low_end);
     if (!low_detected)
         return false;
-    
 
-    wait_and_detect(start_tick, &current_tick, phase_end, data_pin);
+    do
+    {
+        BB_GET_TICKS(current);
+    } while (current - start < presence_end);
 
     return true;
 }
 
 void onewire_write_byte(gpio_pin_t data_pin, uint8_t data)
 {
-    uint32_t start_tick, current_tick, end_tick;
-    uint32_t recovery_ticks = BB_US_TO_TICKS(RECOVERY_US);
-    uint32_t bit_timeslot_ticks = BB_US_TO_TICKS(BIT_TIMESLOT_US);
+    uint32_t start, current, t_low[8];
+    uint32_t low_0 = BB_US_TO_TICKS(LOW_0_US);
+    uint32_t low_1 = BB_US_TO_TICKS(LOW_1_US);
+    uint32_t timeslot = BB_US_TO_TICKS(BIT_TIMESLOT_US);
 
-    BB_GET_TICKS(start_tick);
-
-    for (int i = 0; i < 8; i++)
+    /* pre-calc t_low for all bits  */
+    for (uint8_t i = 0; i < 8; i++)
     {
-        BB_GPIO_PIN_PULL_DOWN(data_pin);
-
-        end_tick = recovery_ticks + (recovery_ticks + bit_timeslot_ticks) * i;
-        wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
-
-        if (data & 0x01)
-            BB_GPIO_PIN_HIGH_Z(data_pin);
-
-        end_tick += bit_timeslot_ticks;
-        wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
-
-        if (!(data & 0x01))
-            BB_GPIO_PIN_HIGH_Z(data_pin);
-
-        end_tick += recovery_ticks;
-        wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
-
+        t_low[i] = ((data & 0x01) ? low_1 : low_0);
         data >>= 1;
+    }
+
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        /* write current bit holding t_low and release after */
+        BB_GPIO_PIN_PULL_DOWN(data_pin);
+        BB_GET_TICKS(start);
+        do
+        {
+            BB_GET_TICKS(current);
+        } while (current - start < t_low[i]);
+        BB_GPIO_PIN_HIGH_Z(data_pin);
+
+        /* wait till slot end */
+        do
+        {
+            BB_GET_TICKS(current);
+        } while (current - start < timeslot);
     }
 }
 
 uint8_t onewire_read_byte(gpio_pin_t data_pin)
 {
     uint8_t data = 0;
-    uint32_t start_tick, current_tick;
-    uint32_t recovery_ticks = BB_US_TO_TICKS(RECOVERY_US);
-    uint32_t read_ticks = BB_US_TO_TICKS(READ_DATA_VALID_US);
-    uint32_t bit_ticks = BB_US_TO_TICKS(BIT_TIMESLOT_US);
-    uint32_t slot_ticks = recovery_ticks + bit_ticks;
+    uint32_t start, current;
+    uint32_t recovery = BB_US_TO_TICKS(RECOVERY_US);
+    uint32_t read_valid = BB_US_TO_TICKS(READ_DATA_VALID_US);
+    uint32_t timeslot = BB_US_TO_TICKS(BIT_TIMESLOT_US);
 
-    BB_GET_TICKS(start_tick);
-
-    for (int i = 0; i < 8; i++)
+    for (uint8_t i = 0; i < 8; i++)
     {
-        uint32_t slot_start = recovery_ticks + i * slot_ticks;
-        uint32_t read_end = slot_start + recovery_ticks + read_ticks;
-        uint32_t slot_end = slot_start + slot_ticks;
-
-        wait_and_detect(start_tick, &current_tick, slot_start, data_pin);
+        /* pull down, hold recovery, release */
         BB_GPIO_PIN_PULL_DOWN(data_pin);
-
-        wait_and_detect(start_tick, &current_tick, slot_start + recovery_ticks, data_pin);
+        BB_GET_TICKS(start);
+        BB_DELAY_TICKS(recovery);
         BB_GPIO_PIN_HIGH_Z(data_pin);
 
-        if (wait_and_detect(start_tick, &current_tick, read_end, data_pin))
-            data |= (1 << i);
+        /* sample until read window closes */
+        do
+        {
+            BB_GET_TICKS(current);
+            data |= (BB_GPIO_PIN_READ(data_pin) << i);
+        } while (current - start < read_valid);
 
-        wait_and_detect(start_tick, &current_tick, slot_end, data_pin);
+        /* wait till slot end */
+        do
+        {
+            BB_GET_TICKS(current);
+        } while (current - start < timeslot);
     }
 
     return data;
