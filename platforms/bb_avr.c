@@ -6,7 +6,6 @@
 #ifdef AVR
 
 #include "bb_avr.h"
-#include <avr/interrupt.h>
 
 volatile uint32_t _bb_timer1_overflow = 0;
 
@@ -15,7 +14,7 @@ ISR(TIMER1_OVF_vect)
     _bb_timer1_overflow += 65536UL;
 }
 
-void bb_avr_timer_init(void)
+void BB_TICKS_SOURCE_INIT(void)
 {
     _bb_timer1_overflow = 0;
     TCCR1A = 0;

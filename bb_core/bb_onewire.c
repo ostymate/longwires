@@ -64,9 +64,9 @@ bool onewire_check_presence(gpio_pin_t data_pin)
     uint32_t phase_end = reset_ticks * 2;
 
     BB_GET_TICKS(start_tick);
-    BB_GPIO_PIN_RESET(data_pin);
+    BB_GPIO_PIN_PULL_DOWN(data_pin);
     wait_and_detect(start_tick, &current_tick, reset_ticks, data_pin);
-    BB_GPIO_PIN_SET(data_pin);
+    BB_GPIO_PIN_HIGH_Z(data_pin);
 
     if (!wait_and_detect(start_tick, &current_tick, phase_high_end, data_pin))
         return false;
@@ -96,19 +96,19 @@ void onewire_write_byte(gpio_pin_t data_pin, uint8_t data)
 
     for (int i = 0; i < 8; i++)
     {
-        BB_GPIO_PIN_RESET(data_pin);
+        BB_GPIO_PIN_PULL_DOWN(data_pin);
 
         end_tick = recovery_ticks + (recovery_ticks + bit_timeslot_ticks) * i;
         wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
 
         if (data & 0x01)
-            BB_GPIO_PIN_SET(data_pin);
+            BB_GPIO_PIN_HIGH_Z(data_pin);
 
         end_tick += bit_timeslot_ticks;
         wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
 
         if (!(data & 0x01))
-            BB_GPIO_PIN_SET(data_pin);
+            BB_GPIO_PIN_HIGH_Z(data_pin);
 
         end_tick += recovery_ticks;
         wait_and_detect(start_tick, &current_tick, end_tick, data_pin);
@@ -135,10 +135,10 @@ uint8_t onewire_read_byte(gpio_pin_t data_pin)
         uint32_t slot_end = slot_start + slot_ticks;
 
         wait_and_detect(start_tick, &current_tick, slot_start, data_pin);
-        BB_GPIO_PIN_RESET(data_pin);
+        BB_GPIO_PIN_PULL_DOWN(data_pin);
 
         wait_and_detect(start_tick, &current_tick, slot_start + recovery_ticks, data_pin);
-        BB_GPIO_PIN_SET(data_pin);
+        BB_GPIO_PIN_HIGH_Z(data_pin);
 
         if (wait_and_detect(start_tick, &current_tick, read_end, data_pin))
             data |= (1 << i);

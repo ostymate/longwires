@@ -30,11 +30,8 @@ static inline void bb_gpio_configure_pin(uint32_t pin, gpio_mode_t mode)
 }
 
 #define BB_GPIO_INIT_OPEN_DRAIN(PIN) bb_gpio_configure_pin((PIN), GPIO_MODE_INPUT_OUTPUT_OD)
-#define BB_GPIO_INIT_PUSH_PULL(PIN) bb_gpio_configure_pin((PIN), GPIO_MODE_INPUT_OUTPUT)
-#define BB_GPIO_INIT_INPUT_FLOATING(PIN) bb_gpio_configure_pin((PIN), GPIO_MODE_INPUT)
-
-#define BB_GPIO_PIN_SET(PIN) ((*(volatile uint32_t *)GPIO_OUT_W1TS_REG) = (1UL << (PIN)))
-#define BB_GPIO_PIN_RESET(PIN) ((*(volatile uint32_t *)GPIO_OUT_W1TC_REG) = (1UL << (PIN)))
+#define BB_GPIO_PIN_HIGH_Z(PIN) ((*(volatile uint32_t *)GPIO_OUT_W1TS_REG) = (1UL << (PIN)))
+#define BB_GPIO_PIN_PULL_DOWN(PIN) ((*(volatile uint32_t *)GPIO_OUT_W1TC_REG) = (1UL << (PIN)))
 #define BB_GPIO_PIN_READ(PIN) ((*(volatile uint32_t *)GPIO_IN_REG >> (PIN)) & 1UL)
 
 #ifdef __XTENSA__
@@ -46,15 +43,9 @@ static inline void bb_gpio_configure_pin(uint32_t pin, gpio_mode_t mode)
 #define BB_GET_TICKS(TICKS) asm volatile("rdcycle %0" : "=r"(TICKS))
 #endif /*__riscv*/
 
-#define CPU_CLOCK_FREQ_HZ (esp_clk_cpu_freq())
-
 #define BB_TICKS_SOURCE_INIT() {}
 
-#define BB_TICKS_PER_US (CPU_CLOCK_FREQ_HZ / 1000000UL)
-
-#define BB_US_TO_TICKS(US) ((uint32_t)(US) * BB_TICKS_PER_US)
-
-#define BB_TICKS_TO_US(TICKS) ((uint32_t)(TICKS) / (BB_TICKS_PER_US))
+#define BB_US_TO_TICKS(US) ((uint32_t)(US) * (esp_clk_cpu_freq() / 1000000UL))
 
 static inline void bb_delay_ticks(uint32_t ticks)
 {
@@ -66,8 +57,6 @@ static inline void bb_delay_ticks(uint32_t ticks)
     } while ((current - start) < ticks);
 }
 #define BB_DELAY_TICKS(TICKS) bb_delay_ticks(TICKS)
-
-#define BB_DELAY_US(US) BB_DELAY_TICKS(BB_US_TO_TICKS((US)))
 
 #endif /* ESP_PLATFORM */
 

@@ -21,20 +21,17 @@ extern "C" {
 
 /**
  * @brief GPIO pin descriptor for STM32.
- * Bundles a GPIO port pointer and pin number.
+ * @param GPIOx GPIO port. GPIOA, GPIOB, etc...
+ * @param pin pin number 0..15
  * @example: gpio_pin_t sda = {GPIOB, 6};
  */
 typedef struct gpio_pin_t
 {
-    GPIO_TypeDef *GPIOx; /**< GPIO port (GPIOA, GPIOB, ...) */
-    uint32_t pin;        /**< Pin number (0..15) */
+    GPIO_TypeDef *GPIOx; 
+    uint32_t pin;        
 } gpio_pin_t;
 
-#define BB_GPIO_MODE_INPUT 0x0UL       // Input mode
 #define BB_GPIO_MODE_OUTPUT_2MHZ 0x2UL // Output mode, max SPEED 2 MHz
-
-#define BB_GPIO_CNF_INPUT_FLOATING 0x1UL    // Floating input
-#define BB_GPIO_CNF_OUTPUT_PUSH_PULL 0x0UL  // General purpose output push-pull
 #define BB_GPIO_CNF_OUTPUT_OPEN_DRAIN 0x1UL // General purpose output open-drain
 
 /* Calculate port index */
@@ -58,11 +55,8 @@ static inline void bb_gpio_configure_pin(GPIO_TypeDef *GPIOx, uint32_t pin, uint
 }
 
 #define BB_GPIO_INIT_OPEN_DRAIN(PIN) bb_gpio_configure_pin(PIN.GPIOx, PIN.pin, BB_GPIO_MODE_OUTPUT_2MHZ, BB_GPIO_CNF_OUTPUT_OPEN_DRAIN)
-#define BB_GPIO_INIT_PUSH_PULL(PIN) bb_gpio_configure_pin(PIN.GPIOx, PIN.pin, BB_GPIO_MODE_OUTPUT_2MHZ, BB_GPIO_CNF_OUTPUT_PUSH_PULL)
-#define BB_GPIO_INIT_INPUT_FLOATING(PIN) bb_gpio_configure_pin(PIN.GPIOx, PIN.pin, BB_GPIO_MODE_INPUT, BB_GPIO_CNF_INPUT_FLOATING)
-
-#define BB_GPIO_PIN_SET(PIN) (((GPIO_TypeDef *)PIN.GPIOx)->BSRR = (1UL << (PIN.pin)))
-#define BB_GPIO_PIN_RESET(PIN) (((GPIO_TypeDef *)PIN.GPIOx)->BSRR = (1UL << ((PIN.pin) + 16UL)))
+#define BB_GPIO_PIN_HIGH_Z(PIN) (((GPIO_TypeDef *)PIN.GPIOx)->BSRR = (1UL << (PIN.pin)))
+#define BB_GPIO_PIN_PULL_DOWN(PIN) (((GPIO_TypeDef *)PIN.GPIOx)->BSRR = (1UL << ((PIN.pin) + 16UL)))
 #define BB_GPIO_PIN_READ(PIN) ((((GPIO_TypeDef *)PIN.GPIOx)->IDR >> (PIN.pin)) & 1UL)
 
 #define BB_TICKS_SOURCE_INIT()                      \
@@ -71,13 +65,7 @@ static inline void bb_gpio_configure_pin(GPIO_TypeDef *GPIOx, uint32_t pin, uint
 
 #define BB_GET_TICKS(TICKS) (TICKS = DWT->CYCCNT)
 
-#define CPU_CLOCK_FREQ_HZ (SystemCoreClock)
-
-#define BB_TICKS_PER_US (CPU_CLOCK_FREQ_HZ / 1000000UL)
-
-#define BB_US_TO_TICKS(US) ((uint32_t)(US) * BB_TICKS_PER_US)
-
-#define BB_TICKS_TO_US(TICKS) ((uint32_t)(TICKS) / (BB_TICKS_PER_US))
+#define BB_US_TO_TICKS(US) ((uint32_t)(US) * (SystemCoreClock / 1000000UL))
 
 static inline void bb_delay_ticks(uint32_t ticks)
 {
@@ -89,8 +77,6 @@ static inline void bb_delay_ticks(uint32_t ticks)
     } while ((current - start) < ticks);
 }
 #define BB_DELAY_TICKS(TICKS) bb_delay_ticks(TICKS)
-
-#define BB_DELAY_US(US) BB_DELAY_TICKS(BB_US_TO_TICKS((US)))
 
 #endif /* STM32F1 */
 
