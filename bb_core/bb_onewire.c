@@ -9,7 +9,6 @@
 #define LOW_0_US 60 /* time to hold bus LOW to write 0 */
 #define LOW_1_US 1  /* time to hold bus HIGH to write 1 */
 #define READ_DATA_VALID_US 15
-#define RECOVERY_US 1
 
 static const uint8_t onewire_crc8_table[256] = {
     0x00, 0x5e, 0xbc, 0xe2, 0x61, 0x3f, 0xdd, 0x83,
@@ -125,16 +124,16 @@ uint8_t onewire_read_byte(gpio_pin_t data_pin)
 {
     uint8_t data = 0;
     uint32_t start, current;
-    uint32_t recovery = BB_US_TO_TICKS(RECOVERY_US);
+    uint32_t read_low = BB_US_TO_TICKS(LOW_1_US);
     uint32_t read_valid = BB_US_TO_TICKS(READ_DATA_VALID_US);
     uint32_t timeslot = BB_US_TO_TICKS(BIT_TIMESLOT_US);
 
     for (uint8_t i = 0; i < 8; i++)
     {
-        /* pull down, hold recovery, release */
+        /* pull down, hold read_low, release */
         BB_GPIO_PIN_PULL_DOWN(data_pin);
         BB_GET_TICKS(start);
-        BB_DELAY_TICKS(recovery);
+        BB_DELAY_TICKS(read_low);
         BB_GPIO_PIN_HIGH_Z(data_pin);
 
         /* sample until read window closes */
