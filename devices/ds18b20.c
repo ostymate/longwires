@@ -30,7 +30,7 @@ static void ds18b20_process_error(ds18b20_sensor_t *sensor)
     sensor->is_converting = false;
 }
 
-void ds18b20_update_measurement(ds18b20_sensor_t *sensor)
+void ds18b20_update(ds18b20_sensor_t *sensor)
 {
     if (!sensor)
         return;

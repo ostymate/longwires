@@ -46,7 +46,7 @@ void ds18b20_init(ds18b20_sensor_t *sensor, gpio_pin_t data_pin);
  * @brief start non-blocking DS18B20 temperature conversion or update temperature if conversion done
  * @param sensor ds18b20 sensor pointer
  */
-void ds18b20_update_measurement(ds18b20_sensor_t *sensor);
+void ds18b20_update(ds18b20_sensor_t *sensor);
 
 #ifdef __cplusplus
 }
