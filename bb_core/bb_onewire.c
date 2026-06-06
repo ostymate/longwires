@@ -1,6 +1,6 @@
 #include "bb_onewire.h"
 
-// one wire timings
+/* one wire timings */
 #define PRESENCE_DETECT_HIGH_US 60
 #define PRESENCE_DETECT_LOW_US 240
 #define RESET_US 480
@@ -54,6 +54,7 @@ bool onewire_check_presence(gpio_pin_t data_pin)
 
     BB_GET_TICKS(start);
 
+    /* pull down, wait reset, release */
     BB_GPIO_PIN_PULL_DOWN(data_pin);
     do
     {
@@ -61,6 +62,7 @@ bool onewire_check_presence(gpio_pin_t data_pin)
     } while (current - start < reset_end);
     BB_GPIO_PIN_HIGH_Z(data_pin);
 
+    /* detect presence high level */
     bool high_detected = false;
     do
     {
@@ -70,6 +72,7 @@ bool onewire_check_presence(gpio_pin_t data_pin)
     if (!high_detected)
         return false;
 
+    /* detect presence low level */
     bool low_detected = false;
     do
     {
@@ -79,6 +82,7 @@ bool onewire_check_presence(gpio_pin_t data_pin)
     if (!low_detected)
         return false;
 
+    /* wait for presence window to close */
     do
     {
         BB_GET_TICKS(current);
@@ -112,7 +116,7 @@ void onewire_write_byte(gpio_pin_t data_pin, uint8_t data)
         } while (current - start < t_low[i]);
         BB_GPIO_PIN_HIGH_Z(data_pin);
 
-        /* wait till slot end */
+        /* wait for slot window to close */
         do
         {
             BB_GET_TICKS(current);
@@ -133,7 +137,10 @@ uint8_t onewire_read_byte(gpio_pin_t data_pin)
         /* pull down, hold read_low, release */
         BB_GPIO_PIN_PULL_DOWN(data_pin);
         BB_GET_TICKS(start);
-        BB_DELAY_TICKS(read_low);
+        do 
+        {
+            BB_GET_TICKS(current);
+        } while (current - start < read_low);
         BB_GPIO_PIN_HIGH_Z(data_pin);
 
         /* sample until read window closes */
@@ -143,7 +150,7 @@ uint8_t onewire_read_byte(gpio_pin_t data_pin)
             data |= (BB_GPIO_PIN_READ(data_pin) << i);
         } while (current - start < read_valid);
 
-        /* wait till slot end */
+        /* wait for slot window to close */
         do
         {
             BB_GET_TICKS(current);
