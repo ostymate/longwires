@@ -17,22 +17,41 @@ extern "C" {
 
 #define gpio_pin_t uint32_t
 
-static inline void bb_gpio_configure_pin(uint32_t pin, gpio_mode_t mode)
-{
-    gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << pin),
-        .mode = mode,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE,
-    };
-    gpio_config(&io_conf);
-}
+#define BB_GPIO_PIN_HIGH_Z(PIN)                      \
+    do                                               \
+    {                                                \
+        GPIO.enable_w1tc = (1UL << (PIN));           \
+        GPIO.out_w1ts = (1UL << (PIN));              \
+        GPIO.pin[(PIN)].pad_driver = 0;              \
+    } while (0)
 
-#define BB_GPIO_INIT_OPEN_DRAIN(PIN) bb_gpio_configure_pin((PIN), GPIO_MODE_INPUT_OUTPUT_OD)
-#define BB_GPIO_PIN_HIGH_Z(PIN) ((*(volatile uint32_t *)GPIO_OUT_W1TS_REG) = (1UL << (PIN)))
-#define BB_GPIO_PIN_PULL_DOWN(PIN) ((*(volatile uint32_t *)GPIO_OUT_W1TC_REG) = (1UL << (PIN)))
-#define BB_GPIO_PIN_READ(PIN) ((*(volatile uint32_t *)GPIO_IN_REG >> (PIN)) & 1UL)
+#define BB_GPIO_PIN_PULL_DOWN(PIN)                   \
+    do                                               \
+    {                                                \
+        GPIO.out_w1tc = (1UL << (PIN));              \
+    } while (0)
+
+#define BB_GPIO_PIN_PULL_UP(PIN)                     \
+    do                                               \
+    {                                                \
+        GPIO.pin[(PIN)].pad_driver = 1;              \
+        GPIO.enable_w1ts = (1UL << (PIN));           \
+        GPIO.out_w1ts = (1UL << (PIN));              \
+    } while (0)
+
+
+#define BB_GPIO_PIN_READ(PIN) ((GPIO.in >> (PIN)) & 1)
+
+#define BB_GPIO_PIN_INIT(PIN)                        \
+    do                                               \
+    {                                                \
+        PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[(PIN)], PIN_FUNC_GPIO); \
+        gpio_pulldown_dis(PIN);                      \
+        gpio_pullup_dis(PIN);                        \
+        GPIO.pin[(PIN)].func = 0;                    \
+        BB_GPIO_PIN_HIGH_Z(PIN);                     \
+    } while (0)
+
 
 #ifdef __XTENSA__
 /* 234 - CCOUNT Xtensa special reg */
