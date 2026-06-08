@@ -16,16 +16,15 @@
  * @brief Busy-wait for the given number of ticks.
  * @param TICKS Number of ticks to wait.
  */
-#define BB_DELAY_TICKS(TICKS)                                              \
-    do                                                                     \
-    {                                                                      \
-        uint32_t _bb_delay_ticks_start, _bb_delay_ticks_now;               \
-        BB_GET_TICKS(_bb_delay_ticks_start);                               \
-        do                                                                 \
-        {                                                                  \
-            BB_GET_TICKS(_bb_delay_ticks_now);                             \
-        } while ((_bb_delay_ticks_now - _bb_delay_ticks_start) < (TICKS)); \
-    } while (0)
+static inline void BB_DELAY_TICKS(uint32_t TICKS)
+{
+    uint32_t _bb_delay_ticks_start, _bb_delay_ticks_now;
+    BB_GET_TICKS(_bb_delay_ticks_start);
+    do
+    {
+        BB_GET_TICKS(_bb_delay_ticks_now);
+    } while ((_bb_delay_ticks_now - _bb_delay_ticks_start) < (TICKS));
+}
 
 #ifndef NULL
 #define NULL ((void *)0)
