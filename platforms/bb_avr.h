@@ -129,7 +129,7 @@ extern "C"
  * @brief Initialise pin for open-drain operation (same as Hi‑Z)
  * @param PIN gpio_pin_t structure
  */
-#define BB_GPIO_INIT_OPEN_DRAIN(PIN) BB_GPIO_PIN_HIGH_Z(PIN)
+#define BB_GPIO_PIN_INIT(PIN) BB_GPIO_PIN_HIGH_Z(PIN)
 
     /**
      * @brief Initialise Timer1 as a free-running tick source.
@@ -170,21 +170,6 @@ extern "C"
  * @return Number of ticks.
  */
 #define BB_US_TO_TICKS(US) ((uint32_t)(US) * (F_CPU / 1000000UL))
-
-/**
- * @brief Busy-wait for the given number of ticks.
- * @param TICKS Number of ticks to wait.
- */
-#define BB_DELAY_TICKS(TICKS)                                              \
-    do                                                                     \
-    {                                                                      \
-        uint32_t _bb_delay_ticks_start, _bb_delay_ticks_now;               \
-        BB_GET_TICKS(_bb_delay_ticks_start);                               \
-        do                                                                 \
-        {                                                                  \
-            BB_GET_TICKS(_bb_delay_ticks_now);                             \
-        } while ((_bb_delay_ticks_now - _bb_delay_ticks_start) < (TICKS)); \
-    } while (0)
 
 #endif /* AVR */
 

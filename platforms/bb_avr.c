@@ -8,7 +8,7 @@
 #include "bb_avr.h"
 
 volatile uint32_t _bb_timer1_overflow = 0;
-static bool uint32_t _bb_timer1_init = false;
+static bool _bb_timer1_init = false;
 
 ISR(TIMER1_OVF_vect)
 {
@@ -17,7 +17,7 @@ ISR(TIMER1_OVF_vect)
 
 void BB_TICKS_SOURCE_INIT(void)
 {
-    if (_bb_timer1_init) 
+    if (_bb_timer1_init)
         return;
     _bb_timer1_overflow = 0;
     TCCR1A = 0;

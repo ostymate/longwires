@@ -19,7 +19,7 @@ void ds18b20_init(ds18b20_sensor_t *sensor, gpio_pin_t data_pin)
     sensor->is_converting = false;
     sensor->error_count = 0;
     sensor->success_count = 0;
-    BB_GPIO_INIT_OPEN_DRAIN(data_pin);
+    BB_GPIO_PIN_INIT(data_pin);
     BB_TICKS_SOURCE_INIT();
 }
 

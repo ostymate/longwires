@@ -8,17 +8,24 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef ESP_PLATFORM
 #include "../platforms/bb_esp32.h"
-#endif /* ESP_PLATFORM */
-
-#ifdef STM32F1
 #include "../platforms/bb_stm32f1.h"
-#endif /* STM32F1 */
-
-#ifdef AVR
 #include "../platforms/bb_avr.h"
-#endif /* AVR */
+
+/**
+ * @brief Busy-wait for the given number of ticks.
+ * @param TICKS Number of ticks to wait.
+ */
+#define BB_DELAY_TICKS(TICKS)                                              \
+    do                                                                     \
+    {                                                                      \
+        uint32_t _bb_delay_ticks_start, _bb_delay_ticks_now;               \
+        BB_GET_TICKS(_bb_delay_ticks_start);                               \
+        do                                                                 \
+        {                                                                  \
+            BB_GET_TICKS(_bb_delay_ticks_now);                             \
+        } while ((_bb_delay_ticks_now - _bb_delay_ticks_start) < (TICKS)); \
+    } while (0)
 
 #ifndef NULL
 #define NULL ((void *)0)

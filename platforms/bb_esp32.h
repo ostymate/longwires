@@ -6,7 +6,8 @@
 #pragma once
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #ifdef ESP_PLATFORM
@@ -17,41 +18,39 @@ extern "C" {
 
 #define gpio_pin_t uint32_t
 
-#define BB_GPIO_PIN_HIGH_Z(PIN)                      \
-    do                                               \
-    {                                                \
-        GPIO.enable_w1tc = (1UL << (PIN));           \
-        GPIO.out_w1ts = (1UL << (PIN));              \
-        GPIO.pin[(PIN)].pad_driver = 0;              \
+#define BB_GPIO_PIN_HIGH_Z(PIN)            \
+    do                                     \
+    {                                      \
+        GPIO.enable_w1tc = (1UL << (PIN)); \
+        GPIO.out_w1ts = (1UL << (PIN));    \
+        GPIO.pin[(PIN)].pad_driver = 0;    \
     } while (0)
 
-#define BB_GPIO_PIN_PULL_DOWN(PIN)                   \
-    do                                               \
-    {                                                \
-        GPIO.out_w1tc = (1UL << (PIN));              \
+#define BB_GPIO_PIN_PULL_DOWN(PIN)      \
+    do                                  \
+    {                                   \
+        GPIO.out_w1tc = (1UL << (PIN)); \
     } while (0)
 
-#define BB_GPIO_PIN_PULL_UP(PIN)                     \
-    do                                               \
-    {                                                \
-        GPIO.pin[(PIN)].pad_driver = 1;              \
-        GPIO.enable_w1ts = (1UL << (PIN));           \
-        GPIO.out_w1ts = (1UL << (PIN));              \
+#define BB_GPIO_PIN_PULL_UP(PIN)           \
+    do                                     \
+    {                                      \
+        GPIO.out_w1ts = (1UL << (PIN));    \
+        GPIO.enable_w1ts = (1UL << (PIN)); \
+        GPIO.pin[(PIN)].pad_driver = 1;    \
     } while (0)
-
 
 #define BB_GPIO_PIN_READ(PIN) ((GPIO.in >> (PIN)) & 1)
 
-#define BB_GPIO_PIN_INIT(PIN)                        \
-    do                                               \
-    {                                                \
+#define BB_GPIO_PIN_INIT(PIN)                                    \
+    do                                                           \
+    {                                                            \
         PIN_FUNC_SELECT(GPIO_PIN_MUX_REG[(PIN)], PIN_FUNC_GPIO); \
-        gpio_pulldown_dis(PIN);                      \
-        gpio_pullup_dis(PIN);                        \
-        GPIO.pin[(PIN)].func = 0;                    \
-        BB_GPIO_PIN_HIGH_Z(PIN);                     \
+        gpio_pulldown_dis(PIN);                                  \
+        gpio_pullup_dis(PIN);                                    \
+        GPIO.pin[(PIN)].func = 0;                                \
+        BB_GPIO_PIN_HIGH_Z(PIN);                                 \
     } while (0)
-
 
 #ifdef __XTENSA__
 /* 234 - CCOUNT Xtensa special reg */
@@ -62,23 +61,13 @@ extern "C" {
 #define BB_GET_TICKS(TICKS) asm volatile("rdcycle %0" : "=r"(TICKS))
 #endif /*__riscv*/
 
-#define BB_TICKS_SOURCE_INIT() {}
+#define BB_TICKS_SOURCE_INIT() \
+    {                          \
+    }
 
 #define BB_US_TO_TICKS(US) ((uint32_t)(US) * (esp_clk_cpu_freq() / 1000000UL))
 
-static inline void bb_delay_ticks(uint32_t ticks)
-{
-    uint32_t start, current;
-    BB_GET_TICKS(start);
-    do
-    {
-        BB_GET_TICKS(current);
-    } while ((current - start) < ticks);
-}
-#define BB_DELAY_TICKS(TICKS) bb_delay_ticks(TICKS)
-
 #endif /* ESP_PLATFORM */
-
 
 #ifdef __cplusplus
 }

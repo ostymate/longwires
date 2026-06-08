@@ -54,7 +54,7 @@ static inline void bb_gpio_configure_pin(GPIO_TypeDef *GPIOx, uint32_t pin, uint
         GPIOx->CRH = (GPIOx->CRH & ~mask) | value;
 }
 
-#define BB_GPIO_INIT_OPEN_DRAIN(PIN) bb_gpio_configure_pin(PIN.GPIOx, PIN.pin, BB_GPIO_MODE_OUTPUT_2MHZ, BB_GPIO_CNF_OUTPUT_OPEN_DRAIN)
+#define BB_GPIO_PIN_INIT(PIN) bb_gpio_configure_pin(PIN.GPIOx, PIN.pin, BB_GPIO_MODE_OUTPUT_2MHZ, BB_GPIO_CNF_OUTPUT_OPEN_DRAIN)
 #define BB_GPIO_PIN_HIGH_Z(PIN) (((GPIO_TypeDef *)PIN.GPIOx)->BSRR = (1UL << (PIN.pin)))
 #define BB_GPIO_PIN_PULL_DOWN(PIN) (((GPIO_TypeDef *)PIN.GPIOx)->BSRR = (1UL << ((PIN.pin) + 16UL)))
 #define BB_GPIO_PIN_READ(PIN) ((((GPIO_TypeDef *)PIN.GPIOx)->IDR >> (PIN.pin)) & 1UL)
@@ -66,17 +66,6 @@ static inline void bb_gpio_configure_pin(GPIO_TypeDef *GPIOx, uint32_t pin, uint
 #define BB_GET_TICKS(TICKS) (TICKS = DWT->CYCCNT)
 
 #define BB_US_TO_TICKS(US) ((uint32_t)(US) * (SystemCoreClock / 1000000UL))
-
-static inline void bb_delay_ticks(uint32_t ticks)
-{
-    uint32_t start, current;
-    BB_GET_TICKS(start);
-    do
-    {
-        BB_GET_TICKS(current);
-    } while ((current - start) < ticks);
-}
-#define BB_DELAY_TICKS(TICKS) bb_delay_ticks(TICKS)
 
 #endif /* STM32F1 */
 

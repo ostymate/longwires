@@ -258,8 +258,8 @@ void i2c_bb_init(i2c_bb_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t a
     dev->addr = addr;
 
     BB_TICKS_SOURCE_INIT();
-    BB_GPIO_INIT_OPEN_DRAIN(sda);
-    BB_GPIO_INIT_OPEN_DRAIN(scl);
+    BB_GPIO_PIN_INIT(sda);
+    BB_GPIO_PIN_INIT(scl);
 
     setup_adaptive_timing(dev);
 }
