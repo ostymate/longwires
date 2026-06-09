@@ -53,9 +53,9 @@ extern "C"
 #define PIN_HIGH(PIN)                           \
     do                                          \
     {                                           \
-        GPIO.enable_w1ts        = (1UL << (PIN)); \
         GPIO.pin[PIN].pad_driver = 1;            \
         GPIO.out_w1ts           = (1UL << (PIN)); \
+        GPIO.enable_w1ts        = (1UL << (PIN)); \
     } while (0)
 
 /**
