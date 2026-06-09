@@ -11,35 +11,16 @@
 - Long distance wiring (tested 100 meters twisted pair)
 - Clock stretching support – Handles slow slave devices with configurable timeout
 - Non-blocking DS18B20 – State machine based, doesn't block your main loop
+- Parasitic power DS18B20 – tested on 100 metres with two wires
 - Fixed-point data – No floating point overhead (optional float support for SHT3X)
-- Platform abstraction – Clean separation between core logic and hardware
+- Platform abstraction – separation between core logic and hardware
 
-## Adaptive Timing
 
-The library measures actual SDA/SCL rise time on every transaction
-and adjusts frequency automatically. This means:
-
-* **Any pull-up resistors work** — 1 kΩ, 4.7 kΩ, 10 kΩ, mismatched
-  between SDA and SCL, or even the weak internal pull-ups inside
-  the sensor (typically ~50 kΩ). No code changes needed.
-
-* **Asymmetric lines are fine** — different pull-up values on SDA
-  and SCL, different wire lengths. The worst-case rise time
-  determines the safe frequency for both.
-
-* **No master-side pull-ups required** — if your sensor already has
-  pull-ups on its board, just connect directly.
-  The library adapts.
-
-* **Hot-plug safe** — pull-ups can be changed during operation.
-  The library recovers on the next transaction with updated timing.
-
-The result: you stop thinking about I2C bus timing and just wire
-things up. The library figures out the rest.
 
 # Supported MCU
     - ESP32 (Xtensa and RISC-V based) 
     - STM32F1 
+    - AVR 
 # Supported frameworks
     - ESP-IDF
     - Platformio
@@ -68,63 +49,138 @@ lib_deps =
 ```
 
 # How to use
-***ESP32 with ESP-IDF framework***
+***ESP32 (ESP-IDF)***
 ```C
 #include "sht3x.h"
+#include "ds18b20.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-gpio_pin_t SDA = 25;
-gpio_pin_t SCL = 26;
-
 void app_main(void)
 {
-    sht3x_sensor_t sensor;
-    float humidity, temperature;
-    sht3x_init(&sensor, SDA, SCL, true);
+    /* ESP32 pin format: PIN_INIT(gpio_number) */
+    gpio_pin_t sda  = PIN_INIT(21);
+    gpio_pin_t scl  = PIN_INIT(22);
+    gpio_pin_t ow   = PIN_INIT(23);
 
-    while (1)
-    {
-        sht3x_read(&sensor, &temperature, &humidity);
-        printf("Temperature: %.1f C, Humidity: %.1f%%\n", temperature, humidity);
-        printf("Success count: %lu, Error count: %lu\n", sensor.success_count, sensor.error_count);
-        printf("Sensor is %s\n", sensor.is_active ? "active" : "inactive");
-        vTaskDelay(pdMS_TO_TICKS(1000));
+    sht3x_sensor_t  sht;
+    ds18b20_sensor_t ds18;
 
+    sht3x_init(&sht, sda, scl, true);
+    ds18b20_init(&ds18, ow);
+
+    uint32_t start, now;
+    GET_TICK(start);
+
+    while (1) {
+        ds18b20_update(&ds18);
+        sht3x_read(&sht, 0, 0);
+        GET_TICK(now);
+
+        if (now - start > US_TO_TICKS(2000000)) {
+            printf("SHT31: %d.%d C, %d %%RH\n",
+                sht.temp_x10 / 10, sht.temp_x10 % 10, sht.hum);
+            printf("DS18:  %d.%d C\n",
+                ds18.temperature_x10 / 10, ds18.temperature_x10 % 10);
+            start = now;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
-
 ```  
 
-***STM32F1 PlatformIO with cmsis framework***
-```C
-
+***STM32F1***
+```c
 #include "sht3x.h"
-#include "stdio.h"
-
-gpio_pin_t SDA = {.GPIOx = GPIOB, .pin = 6};
-gpio_pin_t SCL = {.GPIOx = GPIOB, .pin = 7};
-
-sht3x_sensor_t sensor;
+#include "ds18b20.h"
+#include <stdio.h>
 
 int main(void)
 {
+    /* STM32 pin format: PIN_INIT(GPIOx, pin_number) */
+    gpio_pin_t sda  = PIN_INIT(GPIOB, 6);
+    gpio_pin_t scl  = PIN_INIT(GPIOB, 7);
+    gpio_pin_t ow   = PIN_INIT(GPIOB, 8);
 
-    sht3x_init(&sensor, SDA, SCL, true); // true - set default sht3x addr (0x44), false - set alt addr (0x45)
+    sht3x_sensor_t  sht;
+    ds18b20_sensor_t ds18;
 
-    while (1)
-    {
-        sht3x_read(&sensor, 0, 0);
-        printf("temp_x10: %d, hum: %d, is_active: %d\n", sensor.temp_x10, sensor.hum, sensor.is_active);
-        printf("Total Errors: %lu, Total Successes: %lu\n", sensor.error_count, sensor.success_count);
-        BB_DELAY_US(1000000UL); // 1 second
+    sht3x_init(&sht, sda, scl, true);
+    ds18b20_init(&ds18, ow);
+
+    uint32_t start, now;
+    GET_TICK(start);
+
+    while (1) {
+        ds18b20_update(&ds18);
+        sht3x_read(&sht, 0, 0);
+        GET_TICK(now);
+
+        if (now - start > US_TO_TICKS(2000000)) {
+            printf("SHT31: %d.%d C, %d %%RH\n",
+                sht.temp_x10 / 10, sht.temp_x10 % 10, sht.hum);
+            printf("DS18:  %d.%d C\n",
+                ds18.temperature_x10 / 10, ds18.temperature_x10 % 10);
+            start = now;
+        }
     }
 }
-
-
 ```
 
+***AVR bare metal (AVR‑libc, no Arduino)***
+```c
+#include "ds18b20.h"
+#include <stdio.h>
 
+int main(void)
+{
+    /* AVR bare metal pin format: PIN_INIT(Pxn) */
+    gpio_pin_t ow = PIN_INIT(PB0);
 
-## why?
-because hardware I2C peripherals give up when the line capacitance is too high, the pull-ups are wrong, or the slave needs clock stretching. This library doesn't.
+    ds18b20_sensor_t ds18;
+    ds18b20_init(&ds18, ow);
+
+    uint32_t start, now;
+    GET_TICK(start);
+
+    while (1) {
+        ds18b20_update(&ds18);
+        GET_TICK(now);
+
+        if (now - start > US_TO_TICKS(2000000)) {
+            printf("DS18: %d.%d C\n",
+                ds18.temperature_x10 / 10, ds18.temperature_x10 % 10);
+            start = now;
+        }
+    }
+}
+```
+
+***AVR with ARDUINO***
+```c
+#include "ds18b20.h"
+
+gpio_pin_t ow = PIN_INIT(8);   /* Arduino pin format: PIN_INIT(digital_pin_number) */
+
+ds18b20_sensor_t ds18;
+
+void setup()
+{
+    Serial.begin(115200);
+    ds18b20_init(&ds18, ow);
+}
+
+void loop()
+{
+    ds18b20_update(&ds18);
+
+    Serial.print("DS18: ");
+    Serial.print(ds18.temperature_x10 / 10);
+    Serial.print(".");
+    Serial.print(ds18.temperature_x10 % 10);
+    Serial.println(" C");
+
+    delay(2000);
+}
+```
