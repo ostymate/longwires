@@ -1,5 +1,5 @@
 /**
- * @file bb_i2c.h
+ * @file i2c.h
  * @brief adaptive software bitbang I2C implementation
  * @warning It's blocking! Be careful when use it with slow devices or long wires, as it may block until timeout occurs.
 
@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-#include "bb_utils.h"
+#include "platforms_common.h"
 
 /**
  * @brief I2C device structure

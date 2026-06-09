@@ -1,5 +1,5 @@
 /**
- * @file bb_onewire.h
+ * @file onewire.h
  * @brief software bitbang implementation of onewire 
  */
 #pragma once
@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#include "bb_utils.h"
+#include "platforms_common.h"
 
 // common onewire commands
 #define ONEWIRE_CMD_SKIP_ROM 0xCC

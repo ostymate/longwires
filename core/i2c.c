@@ -1,11 +1,11 @@
 /**
- * @file bb_i2c.c
+ * @file i2c.c
  * @brief Bit-banged I2C. Works on 100m wires. Tolerates noise. Adaptive timings implemented.
  * @note "Frequency" depends on rise time of the signals, but not faster than 100kHz.
  *
  */
 
-#include "bb_i2c.h"
+#include "i2c.h"
 
 #define I2C_BB_RISE_TIMEOUT_US 25000
 #define I2C_BB_MIN_HOLD_US 5
@@ -16,12 +16,12 @@ static bool detect_high(gpio_pin_t pin, uint32_t timeout_ticks)
 {
     uint32_t start_tick, current_tick, low_samples = 0;
 
-    BB_GET_TICKS(start_tick);
+    GET_TICK(start_tick);
     while (1)
     {
-        BB_GET_TICKS(current_tick);
+        GET_TICK(current_tick);
 
-        if (BB_GPIO_PIN_READ(pin))
+        if (PIN_READ(pin))
             return true;
         
         low_samples++;
@@ -36,47 +36,47 @@ static bool i2c_bb_start(i2c_bb_device_t *dev)
     /* release SCL to perform repeated start if needed. slave will release SDA holded LOW after last ACK when master releases SCL*/
     if (!detect_high(dev->sda, dev->t_hold_ticks) || !detect_high(dev->scl, dev->t_hold_ticks))
     {
-        BB_GPIO_PIN_HIGH_Z(dev->sda);
-        BB_GPIO_PIN_HIGH_Z(dev->scl);
+        PIN_Z(dev->sda);
+        PIN_Z(dev->scl);
         if (!detect_high(dev->scl, dev->timeout_ticks)) 
             return false;
         if (!detect_high(dev->sda, dev->timeout_ticks))
             return false;  
     }  
 
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_PULL_DOWN(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_PULL_DOWN(dev->scl);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
+    delay_ticks(dev->t_hold_ticks);
+    PIN_LOW(dev->sda);
+    delay_ticks(dev->t_hold_ticks);
+    PIN_LOW(dev->scl);
+    delay_ticks(dev->t_hold_ticks);
 
     return true;
 }
 
 static void i2c_bb_stop(i2c_bb_device_t *dev)
 {
-    BB_GPIO_PIN_PULL_DOWN(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_HIGH_Z(dev->scl);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_HIGH_Z(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
+    PIN_LOW(dev->sda);
+    delay_ticks(dev->t_hold_ticks);
+    PIN_Z(dev->scl);
+    delay_ticks(dev->t_hold_ticks);
+    PIN_Z(dev->sda);
+    delay_ticks(dev->t_hold_ticks);
 }
 
 static void clean_bus(i2c_bb_device_t *dev)
 {
-    BB_GPIO_PIN_HIGH_Z(dev->sda);
+    PIN_Z(dev->sda);
 
     for (uint32_t i = 0; i < CLEAN_BUS_SCL_CYCLES; i++)
     {
         /* set SCL low */
-        BB_GPIO_PIN_PULL_DOWN(dev->scl);
-        BB_DELAY_TICKS(dev->t_hold_ticks);
+        PIN_LOW(dev->scl);
+        delay_ticks(dev->t_hold_ticks);
 
         /* release SCL and process possible clock stretch waiting SCL HIGH untill timeout */
-        BB_GPIO_PIN_HIGH_Z(dev->scl);
+        PIN_Z(dev->scl);
         detect_high(dev->scl, dev->timeout_ticks);
-        BB_DELAY_TICKS(dev->t_hold_ticks);
+        delay_ticks(dev->t_hold_ticks);
     }
 
     i2c_bb_stop(dev);
@@ -86,13 +86,13 @@ static uint32_t measure_t_hold_adaptive(gpio_pin_t pin, uint32_t timeout_ticks, 
 {
     uint32_t start_tick, current_tick, detected_tick = 0, samples = 0;
 
-    BB_GET_TICKS(start_tick);
-    BB_GPIO_PIN_HIGH_Z(pin);
+    GET_TICK(start_tick);
+    PIN_Z(pin);
     while (1)
     {
-        BB_GET_TICKS(current_tick);
+        GET_TICK(current_tick);
 
-        samples = BB_GPIO_PIN_READ(pin) ? samples + 1 : 0;
+        samples = PIN_READ(pin) ? samples + 1 : 0;
         detected_tick = samples > 1 ? detected_tick : current_tick;
 
         if (((samples >= LEVEL_CONFIRMATION_SAMPLES_COUNT) && ((current_tick - detected_tick) >= t_hold_ticks)) || (current_tick - start_tick) >= timeout_ticks)
@@ -102,16 +102,16 @@ static uint32_t measure_t_hold_adaptive(gpio_pin_t pin, uint32_t timeout_ticks, 
 
 static void setup_adaptive_timing(i2c_bb_device_t *dev)
 {
-    dev->timeout_ticks = BB_US_TO_TICKS(I2C_BB_RISE_TIMEOUT_US);
-    uint32_t min_hold_ticks = BB_US_TO_TICKS(I2C_BB_MIN_HOLD_US);
+    dev->timeout_ticks = US_TO_TICKS(I2C_BB_RISE_TIMEOUT_US);
+    uint32_t min_hold_ticks = US_TO_TICKS(I2C_BB_MIN_HOLD_US);
     dev->t_hold_ticks = min_hold_ticks;
 
     clean_bus(dev);
 
-    BB_GPIO_PIN_PULL_DOWN(dev->scl);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
-    BB_GPIO_PIN_PULL_DOWN(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
+    PIN_LOW(dev->scl);
+    delay_ticks(dev->t_hold_ticks);
+    PIN_LOW(dev->sda);
+    delay_ticks(dev->t_hold_ticks);
 
     /* Release SDA, measure rise */
     uint32_t sda_hold_adaptive = measure_t_hold_adaptive(dev->sda, dev->timeout_ticks, dev->t_hold_ticks);
@@ -129,28 +129,28 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
     {
         /* set current bit */
         if ((byte >> bit) & 1)
-            BB_GPIO_PIN_HIGH_Z(dev->sda);
+            PIN_Z(dev->sda);
         else 
-            BB_GPIO_PIN_PULL_DOWN(dev->sda);
-        BB_DELAY_TICKS(dev->t_hold_ticks);
+            PIN_LOW(dev->sda);
+        delay_ticks(dev->t_hold_ticks);
 
         /* release SCL and wait HIGH processing clock stretch*/
-        BB_GPIO_PIN_HIGH_Z(dev->scl);
+        PIN_Z(dev->scl);
         if (!detect_high(dev->scl, dev->timeout_ticks))
             return false;
-        BB_DELAY_TICKS(dev->t_hold_ticks);
+        delay_ticks(dev->t_hold_ticks);
 
         /*SCL LOW for next bit*/
-        BB_GPIO_PIN_PULL_DOWN(dev->scl);
-        BB_DELAY_TICKS(dev->t_hold_ticks);
+        PIN_LOW(dev->scl);
+        delay_ticks(dev->t_hold_ticks);
     }
 
     /* release SDA for ACK / NACK */
-    BB_GPIO_PIN_HIGH_Z(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
+    PIN_Z(dev->sda);
+    delay_ticks(dev->t_hold_ticks);
 
     /* process clock stretch before ACK / NACK */
-    BB_GPIO_PIN_HIGH_Z(dev->scl);
+    PIN_Z(dev->scl);
     if (!detect_high(dev->scl, dev->timeout_ticks))
         return false;
 
@@ -159,8 +159,8 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
         return false;
 
     /* SCL LOW for next byte */
-    BB_GPIO_PIN_PULL_DOWN(dev->scl);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
+    PIN_LOW(dev->scl);
+    delay_ticks(dev->t_hold_ticks);
 
     return true;
 }
@@ -170,40 +170,40 @@ static bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
     *buf = 0;
 
     /* release SDA before reading */ 
-    BB_GPIO_PIN_HIGH_Z(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
+    PIN_Z(dev->sda);
+    delay_ticks(dev->t_hold_ticks);
     
     for (uint32_t bit = 8; bit--;)
     {
         /* process clock stretch */
-        BB_GPIO_PIN_HIGH_Z(dev->scl);
+        PIN_Z(dev->scl);
         if (!detect_high(dev->scl, dev->timeout_ticks))
             return false;
 
         /* read current bit */
         *buf |= (detect_high(dev->sda, dev->t_hold_ticks) << bit);
-        BB_DELAY_TICKS(dev->t_hold_ticks);
+        delay_ticks(dev->t_hold_ticks);
         
         /* set SCL LOW for next bit */
-        BB_GPIO_PIN_PULL_DOWN(dev->scl);
-        BB_DELAY_TICKS(dev->t_hold_ticks);
+        PIN_LOW(dev->scl);
+        delay_ticks(dev->t_hold_ticks);
     }
 
     /* HIGH == NACK, LOW == ACK*/
     if (ack) 
-        BB_GPIO_PIN_PULL_DOWN(dev->sda);
+        PIN_LOW(dev->sda);
     else
-        BB_GPIO_PIN_HIGH_Z(dev->sda);
-    BB_DELAY_TICKS(dev->t_hold_ticks);
+        PIN_Z(dev->sda);
+    delay_ticks(dev->t_hold_ticks);
 
     /* release SCL and process clock stretch */
-    BB_GPIO_PIN_HIGH_Z(dev->scl);
+    PIN_Z(dev->scl);
     if (!detect_high(dev->scl, dev->timeout_ticks))
         return false;
-    BB_DELAY_TICKS(dev->t_hold_ticks); 
+    delay_ticks(dev->t_hold_ticks); 
 
     /*SCL LOW for next byte */
-    BB_GPIO_PIN_PULL_DOWN(dev->scl);
+    PIN_LOW(dev->scl);
 
     return true;
 }
@@ -256,10 +256,6 @@ void i2c_bb_init(i2c_bb_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t a
     dev->sda = sda;
     dev->scl = scl;
     dev->addr = addr;
-
-    BB_TICKS_SOURCE_INIT();
-    BB_GPIO_PIN_INIT(sda);
-    BB_GPIO_PIN_INIT(scl);
-
+    TICK_INIT();
     setup_adaptive_timing(dev);
 }

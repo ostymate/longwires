@@ -1,9 +1,9 @@
-file(GLOB_RECURSE SOURCES "bb_core/*.c" "devices/*.c" "platforms/*.c")
+file(GLOB_RECURSE SOURCES "core/*.c" "devices/*.c" "platforms/*.c")
 
 idf_component_register(
     SRCS ${SOURCES}
     INCLUDE_DIRS
-        "bb_core"
+        "core"
         "devices"
         "platforms"
     REQUIRES

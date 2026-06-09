@@ -1,4 +1,4 @@
-#include "bb_onewire.h"
+#include "onewire.h"
 
 /* one wire timings */
 #define PRESENCE_DETECT_HIGH_US 60
@@ -47,27 +47,27 @@ static const uint8_t onewire_crc8_table[256] = {
 bool onewire_check_presence(gpio_pin_t data_pin)
 {
     uint32_t start, current;
-    uint32_t reset_end = BB_US_TO_TICKS(RESET_US);
-    uint32_t high_end = reset_end + BB_US_TO_TICKS(PRESENCE_DETECT_HIGH_US);
-    uint32_t low_end = high_end + BB_US_TO_TICKS(PRESENCE_DETECT_LOW_US);
-    uint32_t presence_end = BB_US_TO_TICKS(PRESENCE_US);
+    uint32_t reset_end = US_TO_TICKS(RESET_US);
+    uint32_t high_end = reset_end + US_TO_TICKS(PRESENCE_DETECT_HIGH_US);
+    uint32_t low_end = high_end + US_TO_TICKS(PRESENCE_DETECT_LOW_US);
+    uint32_t presence_end = US_TO_TICKS(PRESENCE_US);
 
-    BB_GET_TICKS(start);
+    GET_TICK(start);
 
     /* pull down, wait reset, release */
-    BB_GPIO_PIN_PULL_DOWN(data_pin);
+    PIN_LOW(data_pin);
     do
     {
-        BB_GET_TICKS(current);
+        GET_TICK(current);
     } while (current - start < reset_end);
-    BB_GPIO_PIN_HIGH_Z(data_pin);
+    PIN_Z(data_pin);
 
     /* detect presence high level */
     bool high_detected = false;
     do
     {
-        BB_GET_TICKS(current);
-        high_detected |= BB_GPIO_PIN_READ(data_pin);
+        GET_TICK(current);
+        high_detected |= PIN_READ(data_pin);
     } while (current - start < high_end);
     if (!high_detected)
         return false;
@@ -76,8 +76,8 @@ bool onewire_check_presence(gpio_pin_t data_pin)
     bool low_detected = false;
     do
     {
-        BB_GET_TICKS(current);
-        low_detected |= (!BB_GPIO_PIN_READ(data_pin));
+        GET_TICK(current);
+        low_detected |= (!PIN_READ(data_pin));
     } while (current - start < low_end);
     if (!low_detected)
         return false;
@@ -85,7 +85,7 @@ bool onewire_check_presence(gpio_pin_t data_pin)
     /* wait for presence window to close */
     do
     {
-        BB_GET_TICKS(current);
+        GET_TICK(current);
     } while (current - start < presence_end);
 
     return true;
@@ -94,9 +94,9 @@ bool onewire_check_presence(gpio_pin_t data_pin)
 void onewire_write_byte(gpio_pin_t data_pin, uint8_t data)
 {
     uint32_t start, current, t_low[8];
-    uint32_t low_0 = BB_US_TO_TICKS(LOW_0_US);
-    uint32_t low_1 = BB_US_TO_TICKS(LOW_1_US);
-    uint32_t timeslot = BB_US_TO_TICKS(BIT_TIMESLOT_US);
+    uint32_t low_0 = US_TO_TICKS(LOW_0_US);
+    uint32_t low_1 = US_TO_TICKS(LOW_1_US);
+    uint32_t timeslot = US_TO_TICKS(BIT_TIMESLOT_US);
 
     /* pre-calc t_low for all bits  */
     for (uint8_t i = 0; i < 8; i++)
@@ -108,18 +108,18 @@ void onewire_write_byte(gpio_pin_t data_pin, uint8_t data)
     for (uint8_t i = 0; i < 8; i++)
     {
         /* write current bit holding t_low and release after */
-        BB_GPIO_PIN_PULL_DOWN(data_pin);
-        BB_GET_TICKS(start);
+        PIN_LOW(data_pin);
+        GET_TICK(start);
         do
         {
-            BB_GET_TICKS(current);
+            GET_TICK(current);
         } while (current - start < t_low[i]);
-        BB_GPIO_PIN_HIGH_Z(data_pin);
+        PIN_Z(data_pin);
 
         /* wait for slot window to close */
         do
         {
-            BB_GET_TICKS(current);
+            GET_TICK(current);
         } while (current - start < timeslot);
     }
 }
@@ -128,32 +128,32 @@ uint8_t onewire_read_byte(gpio_pin_t data_pin)
 {
     uint8_t data = 0;
     uint32_t start, current;
-    uint32_t read_low = BB_US_TO_TICKS(LOW_1_US);
-    uint32_t read_valid = BB_US_TO_TICKS(READ_DATA_VALID_US);
-    uint32_t timeslot = BB_US_TO_TICKS(BIT_TIMESLOT_US);
+    uint32_t read_low = US_TO_TICKS(LOW_1_US);
+    uint32_t read_valid = US_TO_TICKS(READ_DATA_VALID_US);
+    uint32_t timeslot = US_TO_TICKS(BIT_TIMESLOT_US);
 
     for (uint8_t i = 0; i < 8; i++)
     {
         /* pull down, hold read_low, release */
-        BB_GPIO_PIN_PULL_DOWN(data_pin);
-        BB_GET_TICKS(start);
+        PIN_LOW(data_pin);
+        GET_TICK(start);
         do 
         {
-            BB_GET_TICKS(current);
+            GET_TICK(current);
         } while (current - start < read_low);
-        BB_GPIO_PIN_HIGH_Z(data_pin);
+        PIN_Z(data_pin);
 
         /* sample until read window closes */
         do
         {
-            BB_GET_TICKS(current);
-            data |= (BB_GPIO_PIN_READ(data_pin) << i);
+            GET_TICK(current);
+            data |= (PIN_READ(data_pin) << i);
         } while (current - start < read_valid);
 
         /* wait for slot window to close */
         do
         {
-            BB_GET_TICKS(current);
+            GET_TICK(current);
         } while (current - start < timeslot);
     }
 

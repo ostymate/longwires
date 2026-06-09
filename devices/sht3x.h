@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#include "../bb_core/bb_i2c.h"
+#include "../core/i2c.h"
 
 // Default values
 #define SHT3X_DEFAULT_ADDR 0x44

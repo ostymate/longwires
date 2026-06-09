@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#include "../bb_core/bb_i2c.h"
+#include "../core/i2c.h"
 
 #define DS3231_DEFAULT_ADDR 0x68
 

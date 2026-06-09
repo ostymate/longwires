@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#include "../bb_core/bb_onewire.h"
+#include "../core/onewire.h"
 
 /**
  * @brief ds18b20 sensor 

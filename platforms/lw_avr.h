@@ -1,5 +1,5 @@
 /**
- * @file bb_avr.h
+ * @file lw_avr.h
  * @brief Platform abstraction for AVR — bare metal / arduino GPIO and timing
  * @note requirements: TIMER1
  *
@@ -21,14 +21,9 @@ extern "C"
 
     /**
      * @brief GPIO pin descriptor
-     * @param DDRx Data Direction Register  (&DDRx)
-     * @param PORTx Port Output Register    (&PORTx)
-     * @param PINx Port Input Register      (&PINx)
-     * @param bit Pin number within port    (0..7)
-     *
-     * @note examples for easy init:
+     * @note usage:
      * @note gpio_pin_t led_pin = AVR_PIN(PB5); <--- any AVR
-     * @note gpio_pin_t led_pin = ARDUINO_PIN(13); <--- only with ARDUINO framework
+     * @note gpio_pin_t led_pin = ARDUINO_PIN(13); <--- ARDUINO framework only
      */
     typedef struct
     {
@@ -88,7 +83,7 @@ extern "C"
  * @brief High-impedance input: DDR=0, PORT=0
  * @param PIN gpio_pin_t structure
  */
-#define BB_GPIO_PIN_HIGH_Z(PIN)          \
+#define PIN_Z(PIN)                       \
     do                                   \
     {                                    \
         *(PIN.DDRx) &= ~(1 << PIN.bit);  \
@@ -99,7 +94,7 @@ extern "C"
  * @brief Strong pull-down (output low): DDR=1, PORT=0
  * @param PIN gpio_pin_t structure
  */
-#define BB_GPIO_PIN_PULL_DOWN(PIN)       \
+#define PIN_LOW(PIN)                     \
     do                                   \
     {                                    \
         *(PIN.PORTx) &= ~(1 << PIN.bit); \
@@ -110,7 +105,7 @@ extern "C"
  * @brief Strong pull-up (output high): DDR=1, PORT=1
  * @param PIN gpio_pin_t structure
  */
-#define BB_GPIO_PIN_PULL_UP(PIN)        \
+#define PIN_HIGH(PIN)                   \
     do                                  \
     {                                   \
         *(PIN.PORTx) |= (1 << PIN.bit); \
@@ -122,32 +117,27 @@ extern "C"
  * @param PIN gpio_pin_t structure
  * @return 0 or 1
  */
-#define BB_GPIO_PIN_READ(PIN) \
+#define PIN_READ(PIN) \
     ((*(PIN.PINx) >> PIN.bit) & 1)
 
-/**
- * @brief Initialise pin for open-drain operation (same as Hi‑Z)
- * @param PIN gpio_pin_t structure
- */
-#define BB_GPIO_PIN_INIT(PIN) BB_GPIO_PIN_HIGH_Z(PIN)
 
     /**
      * @brief Initialise Timer1 as a free-running tick source.
      * Configures Timer1 with prescaler 1 (each tick = 1 CPU cycle).
      * Overflow interrupt accumulates into a 32-bit counter.
      */
-    void BB_TICKS_SOURCE_INIT(void);
+    void TICK_INIT(void);
 
     /**
      * @brief 32-bit tick counter, incremented by Timer1 overflow ISR.
      */
-    extern volatile uint32_t _bb_timer1_overflow;
+    extern volatile uint32_t _timer1_overflow;
 
 /**
  * @brief Capture current tick count (Timer1 + overflow counter).
  * @param TICKS Variable to store the result.
  */
-#define BB_GET_TICKS(TICKS)                    \
+#define GET_TICK(TICKS)                    \
     do                                         \
     {                                          \
         uint32_t _ovf;                         \
@@ -169,7 +159,7 @@ extern "C"
  * @param US Microseconds.
  * @return Number of ticks.
  */
-#define BB_US_TO_TICKS(US) ((uint32_t)(US) * (F_CPU / 1000000UL))
+#define US_TO_TICKS(US) ((uint32_t)(US) * (F_CPU / 1000000UL))
 
 #endif /* AVR */
 

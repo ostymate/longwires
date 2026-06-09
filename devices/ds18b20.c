@@ -19,8 +19,7 @@ void ds18b20_init(ds18b20_sensor_t *sensor, gpio_pin_t data_pin)
     sensor->is_converting = false;
     sensor->error_count = 0;
     sensor->success_count = 0;
-    BB_GPIO_PIN_INIT(data_pin);
-    BB_TICKS_SOURCE_INIT();
+    TICK_INIT();
 }
 
 static void ds18b20_process_error(ds18b20_sensor_t *sensor)
@@ -36,11 +35,11 @@ void ds18b20_update(ds18b20_sensor_t *sensor)
         return;
 
     uint32_t current_ticks;
-    BB_GET_TICKS(current_ticks);
+    GET_TICK(current_ticks);
 
     if (sensor->is_converting)
     {
-        if ((current_ticks - sensor->conversion_started) < BB_US_TO_TICKS(DS18B20_CONVERSION_US))
+        if ((current_ticks - sensor->conversion_started) < US_TO_TICKS(DS18B20_CONVERSION_US))
             return;
 
         
@@ -84,7 +83,7 @@ void ds18b20_update(ds18b20_sensor_t *sensor)
         {
             onewire_write_byte(sensor->data_pin, ONEWIRE_CMD_SKIP_ROM);
             onewire_write_byte(sensor->data_pin, DS18B20_CMD_CONVERT_TEMP);
-            BB_GET_TICKS(sensor->conversion_started);
+            GET_TICK(sensor->conversion_started);
             sensor->is_converting = true;
         }
         else
