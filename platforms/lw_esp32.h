@@ -11,7 +11,6 @@ extern "C"
 #endif
 
 #ifdef ESP_PLATFORM
-
 #include <driver/gpio.h>
 #include <hal/gpio_ll.h>
 #include <esp_private/esp_clk.h>
@@ -23,38 +22,39 @@ extern "C"
      */
     typedef uint32_t gpio_pin_t;
 
+
 /**
  * @brief High-impedance state
  * @param PIN gpio_pin_t
  */
-#define PIN_Z(PIN)                         \
-    do                                     \
-    {                                      \
-        GPIO.enable_w1tc = (1UL << (PIN)); \
-        GPIO.out_w1ts    = (1UL << (PIN)); \
+#define PIN_Z(PIN)                              \
+    do                                          \
+    {                                           \
+        GPIO.enable_w1tc        = (1UL << (PIN)); \
+        GPIO.pin[PIN].pad_driver = 0;            \
+        GPIO.out_w1ts           = (1UL << (PIN)); \
     } while (0)
 
 /**
  * @brief Strong pull-down: output enabled, line driven LOW
  * @param PIN gpio_pin_t (pin number)
  */
-#define PIN_LOW(PIN)                          \
-    do                                        \
-    {                                         \
-        GPIO.enable_w1ts        = (1UL << (PIN)); \
-        GPIO.pin[PIN].pad_driver = 1;         \
-        GPIO.out_w1tc           = (1UL << (PIN)); \
+#define PIN_LOW(PIN)                            \
+    do                                          \
+    {                                           \
+        GPIO.enable_w1ts = (1UL << (PIN));       \
+        GPIO.out_w1tc    = (1UL << (PIN));       \
     } while (0)
 
 /**
  * @brief Strong pull-up: output enabled, line driven HIGH
  * @param PIN gpio_pin_t (pin number)
  */
-#define PIN_HIGH(PIN)                         \
-    do                                        \
-    {                                         \
+#define PIN_HIGH(PIN)                           \
+    do                                          \
+    {                                           \
         GPIO.enable_w1ts        = (1UL << (PIN)); \
-        GPIO.pin[PIN].pad_driver = 1;         \
+        GPIO.pin[PIN].pad_driver = 1;            \
         GPIO.out_w1ts           = (1UL << (PIN)); \
     } while (0)
 
@@ -72,19 +72,19 @@ extern "C"
      * @note usage:
      * @note gpio_pin_t my_pin = PIN_INIT(21);
      */
-    static inline gpio_pin_t PIN_INIT(uint32_t pin)
-    {
-        gpio_config_t _conf = {
-            .pin_bit_mask = (1ULL << (pin)),
-            .mode = GPIO_MODE_INPUT_OUTPUT_OD,
-            .pull_up_en = GPIO_PULLUP_DISABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type = GPIO_INTR_DISABLE,
-        };
-        gpio_config(&_conf);
-        PIN_Z(pin);
-        return pin;
-    }
+static inline gpio_pin_t PIN_INIT(uint32_t pin)
+{
+    gpio_config_t _conf = {
+        .pin_bit_mask = (1ULL << pin),
+        .mode = GPIO_MODE_INPUT_OUTPUT_OD,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&_conf);
+    PIN_Z(pin);
+    return pin;
+}
 
 /**
  * @brief initialize ticks source
