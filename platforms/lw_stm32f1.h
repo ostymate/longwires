@@ -17,7 +17,7 @@ extern "C"
     /**
      * @brief GPIO pin descriptor
      * @note Usage:
-     * @note gpio_pin_t sda = STM32_PIN(GPIOB, 6);
+     * @note gpio_pin_t sda = PIN_INIT(GPIOB, 6);
      */
     typedef struct gpio_pin_t
     {
@@ -37,9 +37,9 @@ extern "C"
      * @param pin pin number
      * @return configured and initialized pin in HI-Z state
      * @note Usage:
-     * @note gpio_pin_t sda = STM32_PIN(GPIOB, 6);
+     * @note gpio_pin_t sda = PIN_INIT(GPIOB, 6);
      */
-    static inline gpio_pin_t STM32_PIN(GPIO_TypeDef *GPIOx, uint32_t pin)
+    static inline gpio_pin_t PIN_INIT(GPIO_TypeDef *GPIOx, uint32_t pin)
     {
         gpio_pin_t p;
         uint32_t shift = (pin < 8UL) ? (pin * 4UL) : ((pin - 8UL) * 4UL);

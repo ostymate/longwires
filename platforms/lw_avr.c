@@ -1,5 +1,5 @@
 /**
- * @file lw_avr_timer.c
+ * @file lw_avr.c
  * @brief Timer1 ISR and init for AVR platform
  */
 

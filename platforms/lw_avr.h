@@ -22,8 +22,8 @@ extern "C"
     /**
      * @brief GPIO pin descriptor
      * @note usage:
-     * @note gpio_pin_t led_pin = AVR_PIN(PB5); <--- any AVR
-     * @note gpio_pin_t led_pin = ARDUINO_PIN(13); <--- ARDUINO framework only
+     * @note gpio_pin_t led_pin = PIN_INIT(PB5); <--- bare metal AVR
+     * @note gpio_pin_t led_pin = PIN_INIT(13); <--- ARDUINO framework only
      */
     typedef struct
     {
@@ -33,6 +33,25 @@ extern "C"
         uint8_t bit;
     } gpio_pin_t;
 
+#ifdef ARDUINO
+#include <Arduino.h>
+    /**
+     * @brief Initialise a gpio_pin_t from an Arduino pin number.
+     * @param pin  Arduino digital pin number (0..13 on Uno)
+     * @return     Initialised gpio_pin_t structure
+     */
+    static inline gpio_pin_t PIN_INIT(uint8_t pin)
+    {
+        gpio_pin_t p;
+        p.DDRx = portModeRegister(digitalPinToPort(pin));
+        p.PORTx = portOutputRegister(digitalPinToPort(pin));
+        p.PINx = portInputRegister(digitalPinToPort(pin));
+        p.bit = __builtin_ctz(digitalPinToBitMask(pin));
+        return p;
+    }
+#endif /* ARDUINO */
+
+#ifndef ARDUINO /* bare metal AVR */
 #ifndef DDRC
 #ifdef DDRA
 #define DDR_OFFSET (DDRB - DDRA)
@@ -54,30 +73,14 @@ extern "C"
  * @param pin  AVR pin macro: PB0, PC3, PD5, …
  * @return     Initialised gpio_pin_t structure
  */
-#define AVR_PIN(pin)                                                \
+#define PIN_INIT(pin)                                                \
     {                                                               \
         .DDRx = &DDRB + (((int)(#pin[1] - 'B')) * (DDR_OFFSET)),    \
         .PORTx = &PORTB + (((int)(#pin[1] - 'B')) * (PORT_OFFSET)), \
         .PINx = &PINB + (((int)(#pin[1] - 'B')) * (PIN_OFFSET)),    \
         .bit = pin}
 
-#ifdef ARDUINO
-#include <Arduino.h>
-    /**
-     * @brief Initialise a gpio_pin_t from an Arduino pin number.
-     * @param pin  Arduino digital pin number (0..13 on Uno)
-     * @return     Initialised gpio_pin_t structure
-     */
-    static inline gpio_pin_t ARDUINO_PIN(uint8_t pin)
-    {
-        gpio_pin_t p;
-        p.DDRx = portModeRegister(digitalPinToPort(pin));
-        p.PORTx = portOutputRegister(digitalPinToPort(pin));
-        p.PINx = portInputRegister(digitalPinToPort(pin));
-        p.bit = __builtin_ctz(digitalPinToBitMask(pin));
-        return p;
-    }
-#endif /* ARDUINO */
+#endif /* bare metal AVR */
 
 /**
  * @brief High-impedance input: DDR=0, PORT=0
@@ -120,7 +123,6 @@ extern "C"
 #define PIN_READ(PIN) \
     ((*(PIN.PINx) >> PIN.bit) & 1)
 
-
     /**
      * @brief Initialise Timer1 as a free-running tick source.
      * Configures Timer1 with prescaler 1 (each tick = 1 CPU cycle).
@@ -137,7 +139,7 @@ extern "C"
  * @brief Capture current tick count (Timer1 + overflow counter).
  * @param TICKS Variable to store the result.
  */
-#define GET_TICK(TICKS)                    \
+#define GET_TICK(TICKS)                        \
     do                                         \
     {                                          \
         uint32_t _ovf;                         \

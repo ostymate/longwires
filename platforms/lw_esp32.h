@@ -19,7 +19,7 @@ extern "C"
     /**
      * @brief GPIO pin descriptor
      * @note usage:
-     * @note gpio_pin_t my_pin = ESP32_PIN(21);
+     * @note gpio_pin_t my_pin = PIN_INIT(21);
      */
     typedef uint32_t gpio_pin_t;
 
@@ -63,9 +63,9 @@ extern "C"
      * @param pin pin number
      * @return initialized pin
      * @note usage:
-     * @note gpio_pin_t my_pin = ESP32_PIN(21);
+     * @note gpio_pin_t my_pin = PIN_INIT(21);
      */
-    static inline gpio_pin_t ESP32_PIN(uint32_t pin)
+    static inline gpio_pin_t PIN_INIT(uint32_t pin)
     {
         gpio_config_t _conf = {
             .pin_bit_mask = (1ULL << (pin)),
