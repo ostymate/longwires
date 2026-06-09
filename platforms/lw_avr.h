@@ -146,9 +146,9 @@ extern "C"
         uint16_t _tcnt;                        \
         do                                     \
         {                                      \
-            _ovf = _bb_timer1_overflow;        \
+            _ovf = _timer1_overflow;        \
             _tcnt = TCNT1;                     \
-        } while (_ovf != _bb_timer1_overflow); \
+        } while (_ovf != _timer1_overflow); \
         TICKS = _ovf + _tcnt;                  \
     } while (0)
 
