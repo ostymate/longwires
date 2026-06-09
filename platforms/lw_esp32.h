@@ -31,7 +31,6 @@ extern "C"
     do                                          \
     {                                           \
         GPIO.enable_w1tc        = (1UL << (PIN)); \
-        GPIO.pin[PIN].pad_driver = 0;            \
         GPIO.out_w1ts           = (1UL << (PIN)); \
     } while (0)
 
@@ -53,7 +52,6 @@ extern "C"
 #define PIN_HIGH(PIN)                           \
     do                                          \
     {                                           \
-        GPIO.pin[PIN].pad_driver = 1;            \
         GPIO.out_w1ts           = (1UL << (PIN)); \
         GPIO.enable_w1ts        = (1UL << (PIN)); \
     } while (0)
@@ -76,7 +74,7 @@ static inline gpio_pin_t PIN_INIT(uint32_t pin)
 {
     gpio_config_t _conf = {
         .pin_bit_mask = (1ULL << pin),
-        .mode = GPIO_MODE_INPUT_OUTPUT_OD,
+        .mode = GPIO_MODE_INPUT_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
