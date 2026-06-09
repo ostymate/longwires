@@ -13,7 +13,7 @@ extern "C"
 #ifdef ESP_PLATFORM
 
 #include <driver/gpio.h>
-#include <esp32/rom/gpio.h>
+#include <hal/gpio_ll.h>
 #include <esp_private/esp_clk.h>
 
     /**
@@ -27,28 +27,35 @@ extern "C"
  * @brief High-impedance state
  * @param PIN gpio_pin_t
  */
-#define PIN_Z(PIN)                                                     \
-    do                                                                 \
-    {                                                                  \
-        (*(volatile uint32_t *)GPIO_ENABLE_W1TC_REG) = (1UL << (PIN)); \
-        (*(volatile uint32_t *)GPIO_OUT_W1TS_REG) = (1UL << (PIN));    \
+#define PIN_Z(PIN)                         \
+    do                                     \
+    {                                      \
+        GPIO.enable_w1tc = (1UL << (PIN)); \
+        GPIO.out_w1ts    = (1UL << (PIN)); \
     } while (0)
 
 /**
  * @brief Strong pull-down: output enabled, line driven LOW
  * @param PIN gpio_pin_t (pin number)
  */
-#define PIN_LOW(PIN) ((*(volatile uint32_t *)GPIO_OUT_W1TC_REG) = (1UL << (PIN)))
+#define PIN_LOW(PIN)                          \
+    do                                        \
+    {                                         \
+        GPIO.enable_w1ts        = (1UL << (PIN)); \
+        GPIO.pin[PIN].pad_driver = 1;         \
+        GPIO.out_w1tc           = (1UL << (PIN)); \
+    } while (0)
 
 /**
  * @brief Strong pull-up: output enabled, line driven HIGH
  * @param PIN gpio_pin_t (pin number)
  */
-#define PIN_HIGH(PIN)                                                  \
-    do                                                                 \
-    {                                                                  \
-        (*(volatile uint32_t *)GPIO_ENABLE_W1TS_REG) = (1UL << (PIN)); \
-        (*(volatile uint32_t *)GPIO_OUT_W1TS_REG) = (1UL << (PIN));    \
+#define PIN_HIGH(PIN)                         \
+    do                                        \
+    {                                         \
+        GPIO.enable_w1ts        = (1UL << (PIN)); \
+        GPIO.pin[PIN].pad_driver = 1;         \
+        GPIO.out_w1ts           = (1UL << (PIN)); \
     } while (0)
 
 /**
@@ -56,7 +63,7 @@ extern "C"
  * @param PIN gpio_pin_t (pin number)
  * @return 0 or 1
  */
-#define PIN_READ(PIN) ((*(volatile uint32_t *)GPIO_IN_REG >> (PIN)) & 1UL)
+#define PIN_READ(PIN) ((GPIO.in >> (PIN)) & 1UL)
 
     /**
      * @brief Initialise pin
