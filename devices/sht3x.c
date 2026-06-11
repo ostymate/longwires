@@ -77,21 +77,20 @@ bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
         return sht3x_error(sensor);
 
     /* SHT3X_RAW_DATA_STRUCTURE[] = {TEMP_MSB, TEMP_LSB, TEMP_CRC, HUM_MSB, HUM_LSB, HUM_CRC}; */
-    uint32_t raw_temp = ((raw_data[0] << 8) | raw_data[1]);
-    uint32_t raw_hum = ((raw_data[3] << 8) | raw_data[4]);
+    uint16_t raw_temp = ((raw_data[0] << 8) | raw_data[1]);
+    uint16_t raw_hum = ((raw_data[3] << 8) | raw_data[4]);
 
-    int16_t temp_x10 = (1750UL * raw_temp / 65535UL - 450UL); /* SHT3x datasheet formula modified to fixed point */
-    uint8_t hum = (100UL * raw_hum / 65535UL);
+    int16_t temp_x10 = (1750L * (int32_t)raw_temp / 65535L - 450L); /* SHT3x datasheet formula modified to fixed point */
+    uint8_t hum = (100UL * (uint32_t)raw_hum / 65535UL);
 
     if (temp_x10 < SHT3X_VALID_TEMP_X10_MIN_C || temp_x10 > SHT3X_VALID_TEMP_X10_MAX_C || hum > 100)
         return sht3x_error(sensor);
 
-    
     sensor->temp_x10 = temp_x10;
     sensor->hum = hum;
     sensor->success_count++;
     sensor->is_active = true;
-    
+
     if (temperature)
         *temperature = 175.0f * (float)raw_temp / 65535.0f - 45.0f; /* original sht3x datasheet formula */
     if (humidity)
