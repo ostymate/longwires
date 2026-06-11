@@ -21,7 +21,7 @@ extern "C" {
  * @param month 1-12
  * @param year 2000 - 2100
  * @param is_time_valid true if last updating or receiving time was successful, false otherwise 
- * @param i2c_bb_device i2c device struct
+ * @param i2c_device i2c device struct
  * 
  */
 typedef struct
@@ -33,7 +33,7 @@ typedef struct
     uint8_t month;
     uint16_t year;
     bool is_time_valid;
-    i2c_bb_device_t i2c_bb_device;
+    i2c_device_t i2c_device;
 } ds3231_t;
 
 /**

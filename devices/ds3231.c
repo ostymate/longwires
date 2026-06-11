@@ -33,22 +33,22 @@ static inline uint8_t dec_to_bcd(uint8_t dec)
 
 static bool read_reg(ds3231_t *ds3231, uint8_t reg, uint8_t *data)
 {
-    if (!i2c_bb_write(&(ds3231->i2c_bb_device), &reg, 1, false)) 
+    if (!i2c_write(&(ds3231->i2c_device), &reg, 1, false)) 
         return false;
-    return i2c_bb_read(&(ds3231->i2c_bb_device), data, 1, true);
+    return i2c_read(&(ds3231->i2c_device), data, 1, true);
 }
 
 static bool write_reg(ds3231_t *ds3231, uint8_t reg, uint8_t data)
 {
     uint8_t buffer[2] = {reg, data};
-    return i2c_bb_write(&ds3231->i2c_bb_device, buffer, 2, true);
+    return i2c_write(&ds3231->i2c_device, buffer, 2, true);
 }
 
 void ds3231_init(ds3231_t *ds3231, gpio_pin_t sda_pin, gpio_pin_t scl_pin)
 {
     if (!ds3231)
         return;
-    i2c_bb_init(&(ds3231->i2c_bb_device), sda_pin, scl_pin, DS3231_DEFAULT_ADDR);
+    i2c_init(&(ds3231->i2c_device), sda_pin, scl_pin, DS3231_DEFAULT_ADDR);
     ds3231->is_time_valid = false;
 }
 

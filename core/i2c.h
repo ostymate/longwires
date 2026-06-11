@@ -28,14 +28,14 @@ extern "C" {
  * @param t_hold_ticks adaptive timing based on line measurement. do not modify
  * @param t_timeout_ticks SDA/SCL rise timeout ticks
  */
-typedef struct i2c_bb_device_t
+typedef struct i2c_device_t
 {
     gpio_pin_t sda;
     gpio_pin_t scl;
     uint8_t addr;
     uint32_t t_hold_ticks;
     uint32_t timeout_ticks;
-} i2c_bb_device_t;
+} i2c_device_t;
 
 /**
  * @brief I2C device initialization. Call it once before use (although, recall isn't dangerous)
@@ -44,7 +44,7 @@ typedef struct i2c_bb_device_t
  * @param scl SCL pin (the same requirements as for SDA pin)
  * @param addr I2C device address (7-bit)
  */
-void i2c_bb_init(i2c_bb_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr);
+void i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr);
 
 /**
  * @brief write data to device
@@ -54,7 +54,7 @@ void i2c_bb_init(i2c_bb_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t a
  * @param stop true: perform stop condition after writing || false: do NOT perform (false == repeated start mode)
  * @return true: slave received all bytes with ACK || false: NACK or timeout
  */
-bool i2c_bb_write(i2c_bb_device_t *dev, const uint8_t *data, uint32_t len, bool stop);
+bool i2c_write(i2c_device_t *dev, const uint8_t *data, uint32_t len, bool stop);
 
 /**
  * @brief read data from device
@@ -64,7 +64,7 @@ bool i2c_bb_write(i2c_bb_device_t *dev, const uint8_t *data, uint32_t len, bool 
  * @param stop true: perform stop condition after reading || false: do NOT perform (false == repeated start mode)
  * @return true: all bytes were read successfully || false: timeout
  */
-bool i2c_bb_read(i2c_bb_device_t *dev, uint8_t *buffer, uint32_t len, bool stop);
+bool i2c_read(i2c_device_t *dev, uint8_t *buffer, uint32_t len, bool stop);
 
 
 #ifdef __cplusplus

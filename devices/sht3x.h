@@ -22,7 +22,7 @@ extern "C" {
  * @param is_active true if last measurement was successful, false - otherwise
  * @param error_count number of failed measurements
  * @param success_count number of sucessful measurements
- * @param i2c_bb_device I2C device structure
+ * @param i2c_device I2C device structure
  */
 typedef struct
 {
@@ -31,7 +31,7 @@ typedef struct
     bool is_active;
     uint32_t error_count;
     uint32_t success_count;
-    i2c_bb_device_t i2c_bb_device;
+    i2c_device_t i2c_device;
 } sht3x_sensor_t;
 
 /**

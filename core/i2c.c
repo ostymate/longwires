@@ -7,8 +7,8 @@
 
 #include "i2c.h"
 
-#define I2C_BB_RISE_TIMEOUT_US 25000
-#define I2C_BB_MIN_HOLD_US 5
+#define I2C_RISE_TIMEOUT_US 25000
+#define I2C_MIN_HOLD_US 5
 #define LEVEL_CONFIRMATION_SAMPLES_COUNT 5
 #define CLEAN_BUS_SCL_CYCLES 9
 
@@ -31,7 +31,7 @@ static bool detect_high(gpio_pin_t pin, uint32_t timeout_ticks)
     }
 }
 
-static bool i2c_bb_start(i2c_bb_device_t *dev)
+static bool i2c_start(i2c_device_t *dev)
 {
     /* release SCL to perform repeated start if needed. slave will release SDA holded LOW after last ACK when master releases SCL*/
     if (!detect_high(dev->sda, dev->t_hold_ticks) || !detect_high(dev->scl, dev->t_hold_ticks))
@@ -53,7 +53,7 @@ static bool i2c_bb_start(i2c_bb_device_t *dev)
     return true;
 }
 
-static void i2c_bb_stop(i2c_bb_device_t *dev)
+static void i2c_stop(i2c_device_t *dev)
 {
     PIN_LOW(dev->sda);
     delay_ticks(dev->t_hold_ticks);
@@ -63,7 +63,7 @@ static void i2c_bb_stop(i2c_bb_device_t *dev)
     delay_ticks(dev->t_hold_ticks);
 }
 
-static void clean_bus(i2c_bb_device_t *dev)
+static void clean_bus(i2c_device_t *dev)
 {
     PIN_Z(dev->sda);
 
@@ -79,10 +79,10 @@ static void clean_bus(i2c_bb_device_t *dev)
         delay_ticks(dev->t_hold_ticks);
     }
 
-    i2c_bb_stop(dev);
+    i2c_stop(dev);
 }
 
-static uint32_t measure_t_hold_adaptive(gpio_pin_t pin, uint32_t timeout_ticks, uint32_t t_hold_ticks)
+static uint32_t measure_t_rise(gpio_pin_t pin, uint32_t timeout_ticks, uint32_t t_hold_ticks)
 {
     uint32_t start_tick, current_tick, detected_tick = 0, samples = 0;
 
@@ -100,10 +100,10 @@ static uint32_t measure_t_hold_adaptive(gpio_pin_t pin, uint32_t timeout_ticks, 
     }
 }
 
-static void setup_adaptive_timing(i2c_bb_device_t *dev)
+static void setup_timing(i2c_device_t *dev)
 {
-    dev->timeout_ticks = US_TO_TICKS(I2C_BB_RISE_TIMEOUT_US);
-    uint32_t min_hold_ticks = US_TO_TICKS(I2C_BB_MIN_HOLD_US);
+    dev->timeout_ticks = US_TO_TICKS(I2C_RISE_TIMEOUT_US);
+    uint32_t min_hold_ticks = US_TO_TICKS(I2C_MIN_HOLD_US);
     dev->t_hold_ticks = min_hold_ticks;
 
     clean_bus(dev);
@@ -114,16 +114,16 @@ static void setup_adaptive_timing(i2c_bb_device_t *dev)
     delay_ticks(dev->t_hold_ticks);
 
     /* Release SDA, measure rise */
-    uint32_t sda_hold_adaptive = measure_t_hold_adaptive(dev->sda, dev->timeout_ticks, dev->t_hold_ticks);
+    uint32_t sda_hold_adaptive = measure_t_rise(dev->sda, dev->timeout_ticks, dev->t_hold_ticks);
     /* Release SCL, measure rise */
-    uint32_t scl_hold_adaptive = measure_t_hold_adaptive(dev->scl, dev->timeout_ticks, dev->t_hold_ticks);
+    uint32_t scl_hold_adaptive = measure_t_rise(dev->scl, dev->timeout_ticks, dev->t_hold_ticks);
 
     dev->t_hold_ticks = (sda_hold_adaptive > scl_hold_adaptive ? sda_hold_adaptive : scl_hold_adaptive);
 
     clean_bus(dev);
 }
 
-static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
+static bool i2c_write_byte(i2c_device_t *dev, uint8_t byte)
 {
     for (uint32_t bit = 8; bit--;)
     {
@@ -165,7 +165,7 @@ static bool i2c_bb_write_byte(i2c_bb_device_t *dev, uint8_t byte)
     return true;
 }
 
-static bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
+static bool i2c_read_byte(i2c_device_t *dev, uint8_t *buf, bool ack)
 {
     *buf = 0;
 
@@ -208,54 +208,54 @@ static bool i2c_bb_read_byte(i2c_bb_device_t *dev, uint8_t *buf, bool ack)
     return true;
 }
 
-bool i2c_bb_write(i2c_bb_device_t *dev, const uint8_t *data, uint32_t len, bool stop)
+bool i2c_write(i2c_device_t *dev, const uint8_t *data, uint32_t len, bool stop)
 {
-    setup_adaptive_timing(dev);
+    setup_timing(dev);
     
-    if (!i2c_bb_start(dev))
+    if (!i2c_start(dev))
         return false;
 
-    if (!i2c_bb_write_byte(dev, (dev->addr << 1) | 0x00))
-        return false;
-
-    for (uint32_t i = 0; i < len; i++)
-    {
-        if (!i2c_bb_write_byte(dev, data[i]))
-            return false;
-    }
-
-    if (stop)
-        i2c_bb_stop(dev);
-
-    return true;
-}
-
-bool i2c_bb_read(i2c_bb_device_t *dev, uint8_t *buf, uint32_t len, bool stop)
-{
-    if (!i2c_bb_start(dev))
-        return false;
-
-    if (!i2c_bb_write_byte(dev, (dev->addr << 1) | 0x01))
+    if (!i2c_write_byte(dev, (dev->addr << 1) | 0x00))
         return false;
 
     for (uint32_t i = 0; i < len; i++)
     {
-        if (!i2c_bb_read_byte(dev, buf + i, i < (len - 1)))
+        if (!i2c_write_byte(dev, data[i]))
             return false;
     }
 
     if (stop)
-        i2c_bb_stop(dev);
+        i2c_stop(dev);
 
     return true;
 }
 
-void i2c_bb_init(i2c_bb_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr)
+bool i2c_read(i2c_device_t *dev, uint8_t *buf, uint32_t len, bool stop)
 {
-    *dev = (i2c_bb_device_t){0};
+    if (!i2c_start(dev))
+        return false;
+
+    if (!i2c_write_byte(dev, (dev->addr << 1) | 0x01))
+        return false;
+
+    for (uint32_t i = 0; i < len; i++)
+    {
+        if (!i2c_read_byte(dev, buf + i, i < (len - 1)))
+            return false;
+    }
+
+    if (stop)
+        i2c_stop(dev);
+
+    return true;
+}
+
+void i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr)
+{
+    *dev = (i2c_device_t){0};
     dev->sda = sda;
     dev->scl = scl;
     dev->addr = addr;
     TICK_INIT();
-    setup_adaptive_timing(dev);
+    setup_timing(dev);
 }

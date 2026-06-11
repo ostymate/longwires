@@ -54,7 +54,7 @@ void sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, 
 {
     if (!sensor)
         return;
-    i2c_bb_init(&sensor->i2c_bb_device, sda_pin, scl_pin, (default_addr ? SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR));
+    i2c_init(&sensor->i2c_device, sda_pin, scl_pin, (default_addr ? SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR));
     sensor->error_count = 0;
     sensor->success_count = 0;
     sensor->is_active = false;
@@ -67,10 +67,10 @@ bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
 
     uint8_t raw_data[6] = {0};
 
-    if (!i2c_bb_write(&sensor->i2c_bb_device, sht3x_high_rep_cmd, sizeof(sht3x_high_rep_cmd), true))
+    if (!i2c_write(&sensor->i2c_device, sht3x_high_rep_cmd, sizeof(sht3x_high_rep_cmd), true))
         return sht3x_error(sensor);
 
-    if (!i2c_bb_read(&sensor->i2c_bb_device, raw_data, sizeof(raw_data), true))
+    if (!i2c_read(&sensor->i2c_device, raw_data, sizeof(raw_data), true))
         return sht3x_error(sensor);
 
     if (!sht3x_check_crc(raw_data))
