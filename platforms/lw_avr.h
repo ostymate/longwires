@@ -73,7 +73,7 @@ extern "C"
  * @param pin  AVR pin macro: PB0, PC3, PD5, …
  * @return     Initialised gpio_pin_t structure
  */
-#define PIN_INIT(pin)                                                \
+#define PIN_INIT(pin)                                               \
     {                                                               \
         .DDRx = &DDRB + (((int)(#pin[1] - 'B')) * (DDR_OFFSET)),    \
         .PORTx = &PORTB + (((int)(#pin[1] - 'B')) * (PORT_OFFSET)), \
@@ -131,25 +131,25 @@ extern "C"
     void TICK_INIT(void);
 
     /**
-     * @brief 32-bit tick counter, incremented by Timer1 overflow ISR.
+     * @brief 16-bit tick counter, incremented by Timer1 overflow ISR.
      */
-    extern volatile uint32_t _timer1_overflow;
+    extern volatile uint16_t _timer1_overflow;
 
 /**
  * @brief Capture current tick count (Timer1 + overflow counter).
  * @param TICKS Variable to store the result.
  */
-#define GET_TICK(TICKS)                        \
-    do                                         \
-    {                                          \
-        uint32_t _ovf;                         \
-        uint16_t _tcnt;                        \
-        do                                     \
-        {                                      \
-            _ovf = _timer1_overflow;        \
-            _tcnt = TCNT1;                     \
-        } while (_ovf != _timer1_overflow); \
-        TICKS = _ovf + _tcnt;                  \
+#define GET_TICK(TICKS)                         \
+    do                                          \
+    {                                           \
+        uint16_t _ovf;                          \
+        uint16_t _tcnt;                         \
+        do                                      \
+        {                                       \
+            _ovf = _timer1_overflow;            \
+            _tcnt = TCNT1;                      \
+        } while (_ovf != _timer1_overflow);     \
+        TICKS = ((uint32_t)_ovf) << 16 | _tcnt; \
     } while (0)
 
 #ifndef F_CPU

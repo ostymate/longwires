@@ -7,12 +7,12 @@
 
 #include "lw_avr.h"
 
-volatile uint32_t _timer1_overflow = 0;
+volatile uint16_t _timer1_overflow = 0;
 static bool _timer1_init = false;
 
 ISR(TIMER1_OVF_vect)
 {
-    _timer1_overflow += 65536UL;
+    _timer1_overflow++;
 }
 
 void TICK_INIT(void)
