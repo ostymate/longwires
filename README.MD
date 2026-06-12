@@ -184,3 +184,6 @@ void loop()
     delay(2000);
 }
 ```
+
+## DS18B20 wiring diagram 
+![DS18B20 wiring diagram](DS18B20_wiring.svg)
