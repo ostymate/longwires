@@ -34,12 +34,12 @@ void ds18b20_update(ds18b20_sensor_t *sensor)
     if (!sensor)
         return;
 
-    uint32_t current_ticks;
-    GET_TICK(current_ticks);
+    uint32_t now;
+    GET_TICK(now);
 
     if (sensor->is_converting)
     {
-        if ((current_ticks - sensor->conversion_started) < US_TO_TICKS(DS18B20_CONVERSION_US))
+        if ((now - sensor->conversion_started) < US_TO_TICKS(DS18B20_CONVERSION_US))
             return;
 
         
