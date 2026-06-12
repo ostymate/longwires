@@ -9,40 +9,49 @@
 
 #define I2C_RISE_TIMEOUT_US 25000
 #define I2C_MIN_HOLD_US 5
-#define LEVEL_CONFIRMATION_SAMPLES_COUNT 5
 #define CLEAN_BUS_SCL_CYCLES 9
 
 static bool detect_high(gpio_pin_t pin, uint32_t timeout_ticks)
 {
-    uint32_t start_tick, current_tick, low_samples = 0;
+    uint32_t start, now;
 
-    GET_TICK(start_tick);
+    GET_TICK(start);
     while (1)
     {
-        GET_TICK(current_tick);
+        GET_TICK(now);
 
         if (PIN_READ(pin))
             return true;
-        
-        low_samples++;
 
-        if (((current_tick - start_tick) >= timeout_ticks) && low_samples >= LEVEL_CONFIRMATION_SAMPLES_COUNT)
+        if ((now - start) >= timeout_ticks)
             return false;
     }
 }
 
+static uint32_t measure_t_rise(gpio_pin_t pin, uint32_t timeout_ticks)
+{
+    uint32_t start, now;
+
+    GET_TICK(start);
+    PIN_Z(pin);
+    detect_high(pin, timeout_ticks);
+    GET_TICK(now);
+
+    return now - start;
+}
+
 static bool i2c_start(i2c_device_t *dev)
 {
-    /* release SCL to perform repeated start if needed. slave will release SDA holded LOW after last ACK when master releases SCL*/
+    /* release SCL to perform repeated start if needed. slave releases SDA held LOW after last ACK when master releases SCL*/
     if (!detect_high(dev->sda, dev->t_hold_ticks) || !detect_high(dev->scl, dev->t_hold_ticks))
     {
         PIN_Z(dev->sda);
         PIN_Z(dev->scl);
-        if (!detect_high(dev->scl, dev->timeout_ticks)) 
+        if (!detect_high(dev->scl, dev->timeout_ticks))
             return false;
         if (!detect_high(dev->sda, dev->timeout_ticks))
-            return false;  
-    }  
+            return false;
+    }
 
     delay_ticks(dev->t_hold_ticks);
     PIN_LOW(dev->sda);
@@ -82,29 +91,10 @@ static void clean_bus(i2c_device_t *dev)
     i2c_stop(dev);
 }
 
-static uint32_t measure_t_rise(gpio_pin_t pin, uint32_t timeout_ticks, uint32_t t_hold_ticks)
-{
-    uint32_t start_tick, current_tick, detected_tick = 0, samples = 0;
-
-    GET_TICK(start_tick);
-    PIN_Z(pin);
-    while (1)
-    {
-        GET_TICK(current_tick);
-
-        samples = PIN_READ(pin) ? samples + 1 : 0;
-        detected_tick = samples > 1 ? detected_tick : current_tick;
-
-        if (((samples >= LEVEL_CONFIRMATION_SAMPLES_COUNT) && ((current_tick - detected_tick) >= t_hold_ticks)) || (current_tick - start_tick) >= timeout_ticks)
-            return current_tick - start_tick;
-    }
-}
-
-static void setup_timing(i2c_device_t *dev)
+static bool setup_timing(i2c_device_t *dev)
 {
     dev->timeout_ticks = US_TO_TICKS(I2C_RISE_TIMEOUT_US);
-    uint32_t min_hold_ticks = US_TO_TICKS(I2C_MIN_HOLD_US);
-    dev->t_hold_ticks = min_hold_ticks;
+    dev->t_hold_ticks = US_TO_TICKS(I2C_MIN_HOLD_US);
 
     clean_bus(dev);
 
@@ -114,13 +104,20 @@ static void setup_timing(i2c_device_t *dev)
     delay_ticks(dev->t_hold_ticks);
 
     /* Release SDA, measure rise */
-    uint32_t sda_hold_adaptive = measure_t_rise(dev->sda, dev->timeout_ticks, dev->t_hold_ticks);
-    /* Release SCL, measure rise */
-    uint32_t scl_hold_adaptive = measure_t_rise(dev->scl, dev->timeout_ticks, dev->t_hold_ticks);
+    uint32_t sda_rise = measure_t_rise(dev->sda, dev->timeout_ticks);
+    if (sda_rise >= dev->timeout_ticks)
+        return false;
 
-    dev->t_hold_ticks = (sda_hold_adaptive > scl_hold_adaptive ? sda_hold_adaptive : scl_hold_adaptive);
+    /* Release SCL, measure rise */
+    uint32_t scl_rise = measure_t_rise(dev->scl, dev->timeout_ticks);
+    if (scl_rise >= dev->timeout_ticks)
+        return false;
+
+    dev->t_hold_ticks += (sda_rise > scl_rise ? sda_rise : scl_rise);
 
     clean_bus(dev);
+
+    return true;
 }
 
 static bool i2c_write_byte(i2c_device_t *dev, uint8_t byte)
@@ -130,7 +127,7 @@ static bool i2c_write_byte(i2c_device_t *dev, uint8_t byte)
         /* set current bit */
         if ((byte >> bit) & 1)
             PIN_Z(dev->sda);
-        else 
+        else
             PIN_LOW(dev->sda);
         delay_ticks(dev->t_hold_ticks);
 
@@ -169,10 +166,10 @@ static bool i2c_read_byte(i2c_device_t *dev, uint8_t *buf, bool ack)
 {
     *buf = 0;
 
-    /* release SDA before reading */ 
+    /* release SDA before reading */
     PIN_Z(dev->sda);
     delay_ticks(dev->t_hold_ticks);
-    
+
     for (uint32_t bit = 8; bit--;)
     {
         /* process clock stretch */
@@ -183,14 +180,14 @@ static bool i2c_read_byte(i2c_device_t *dev, uint8_t *buf, bool ack)
         /* read current bit */
         *buf |= (detect_high(dev->sda, dev->t_hold_ticks) << bit);
         delay_ticks(dev->t_hold_ticks);
-        
+
         /* set SCL LOW for next bit */
         PIN_LOW(dev->scl);
         delay_ticks(dev->t_hold_ticks);
     }
 
     /* HIGH == NACK, LOW == ACK*/
-    if (ack) 
+    if (ack)
         PIN_LOW(dev->sda);
     else
         PIN_Z(dev->sda);
@@ -200,7 +197,7 @@ static bool i2c_read_byte(i2c_device_t *dev, uint8_t *buf, bool ack)
     PIN_Z(dev->scl);
     if (!detect_high(dev->scl, dev->timeout_ticks))
         return false;
-    delay_ticks(dev->t_hold_ticks); 
+    delay_ticks(dev->t_hold_ticks);
 
     /*SCL LOW for next byte */
     PIN_LOW(dev->scl);
@@ -210,8 +207,9 @@ static bool i2c_read_byte(i2c_device_t *dev, uint8_t *buf, bool ack)
 
 bool i2c_write(i2c_device_t *dev, const uint8_t *data, uint32_t len, bool stop)
 {
-    setup_timing(dev);
-    
+    if (!setup_timing(dev))
+        return false;
+
     if (!i2c_start(dev))
         return false;
 
