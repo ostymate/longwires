@@ -43,8 +43,9 @@ typedef struct i2c_device_t
  * @param sda SDA pin (any pin that supports open drain configuration)
  * @param scl SCL pin (the same requirements as for SDA pin)
  * @param addr I2C device address (7-bit)
+ * @return true successful init, false otherwise
  */
-void i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr);
+bool i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr);
 
 /**
  * @brief write data to device

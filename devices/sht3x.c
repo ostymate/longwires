@@ -1,5 +1,8 @@
 #include "sht3x.h"
 
+#define SHT3X_DEFAULT_ADDR 0x44
+#define SHT3X_ALT_ADDR 0x45
+
 /* high repeatability single measurement with clock stretching */
 static const uint8_t sht3x_high_rep_cmd[] = {0x2C, 0x06};
 
@@ -43,21 +46,13 @@ static bool sht3x_check_crc(const uint8_t *raw_data)
     return (temp_crc == raw_data[2]) && (hum_crc == raw_data[5]);
 }
 
-static bool sht3x_error(sht3x_sensor_t *sensor)
-{
-    sensor->error_count++;
-    sensor->is_active = false;
-    return false;
-}
-
-void sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool default_addr)
+bool sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool default_addr)
 {
     if (!sensor)
-        return;
-    i2c_init(&sensor->i2c_device, sda_pin, scl_pin, (default_addr ? SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR));
-    sensor->error_count = 0;
-    sensor->success_count = 0;
-    sensor->is_active = false;
+        return false;
+    sensor->temp_x10 = INT16_MAX;
+    sensor->hum = UINT8_MAX;
+    return i2c_init(&sensor->i2c_device, sda_pin, scl_pin, (default_addr ? SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR));
 }
 
 bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
@@ -68,13 +63,13 @@ bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
     uint8_t raw_data[6] = {0};
 
     if (!i2c_write(&sensor->i2c_device, sht3x_high_rep_cmd, sizeof(sht3x_high_rep_cmd), true))
-        return sht3x_error(sensor);
+        return false;
 
     if (!i2c_read(&sensor->i2c_device, raw_data, sizeof(raw_data), true))
-        return sht3x_error(sensor);
+        return false;
 
     if (!sht3x_check_crc(raw_data))
-        return sht3x_error(sensor);
+        return false;
 
     /* SHT3X_RAW_DATA_STRUCTURE[] = {TEMP_MSB, TEMP_LSB, TEMP_CRC, HUM_MSB, HUM_LSB, HUM_CRC}; */
     uint16_t raw_temp = ((raw_data[0] << 8) | raw_data[1]);
@@ -84,12 +79,10 @@ bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
     uint8_t hum = (100UL * (uint32_t)raw_hum / 65535UL);
 
     if (temp_x10 < SHT3X_VALID_TEMP_X10_MIN_C || temp_x10 > SHT3X_VALID_TEMP_X10_MAX_C || hum > 100)
-        return sht3x_error(sensor);
+        return false;
 
     sensor->temp_x10 = temp_x10;
     sensor->hum = hum;
-    sensor->success_count++;
-    sensor->is_active = true;
 
     if (temperature)
         *temperature = 175.0f * (float)raw_temp / 65535.0f - 45.0f; /* original sht3x datasheet formula */

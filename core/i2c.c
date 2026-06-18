@@ -248,12 +248,12 @@ bool i2c_read(i2c_device_t *dev, uint8_t *buf, uint32_t len, bool stop)
     return true;
 }
 
-void i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr)
+bool i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr)
 {
     *dev = (i2c_device_t){0};
     dev->sda = sda;
     dev->scl = scl;
     dev->addr = addr;
     TICK_INIT();
-    setup_timing(dev);
+    return setup_timing(dev);
 }
