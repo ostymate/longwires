@@ -19,7 +19,7 @@ extern "C"
     {
         uint8_t buf[BUF_SIZE];   /** buffer for page data and commands */
         i2c_device_t i2c_device; /** I2C device structure */
-    } oled_t;                    /** OLED device structure */
+    } ssd1306_t;                    /** OLED device structure */
 
     /**
      * @brief Initialize the OLED display
@@ -30,7 +30,7 @@ extern "C"
      * @param flip true to flip the display 180 degrees, false for normal orientation
      * @return true on success, false on failure
      */
-    bool oled_init(oled_t *dev, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool use_default_addr, bool flip);
+    bool ssd1306_init(ssd1306_t *dev, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool use_default_addr, bool flip);
 
     /**
      * @brief Print ASCII text
@@ -41,7 +41,7 @@ extern "C"
      * @param str String to print
      * @return true on success, false on failure
      */
-    bool oled_print(oled_t *dev, const char *str);
+    bool ssd1306_print(ssd1306_t *dev, const char *str);
 
 #ifdef __cplusplus
 }

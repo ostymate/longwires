@@ -10,6 +10,8 @@ static const uint8_t sht3x_high_rep_cmd[] = {0x2C, 0x06};
 #define SHT3X_VALID_TEMP_X10_MIN_C -400 /* MIN valid -40°C */
 #define SHT3X_VALID_TEMP_X10_MAX_C 1250 /* MAX valid 125°C */
 
+#define NEVER_UPDATED UINT32_MAX
+
 /*Pre-calculated crc8 table for 0x31 polynominal */
 static const uint8_t crc8_table_poly_0x31[256] = {
     0x00, 0x31, 0x62, 0x53, 0xC4, 0xF5, 0xA6, 0x97, 0xB9, 0x88, 0xDB, 0xEA, 0x7D, 0x4C, 0x1F, 0x2E,
@@ -46,16 +48,17 @@ static bool sht3x_check_crc(const uint8_t *raw_data)
     return (temp_crc == raw_data[2]) && (hum_crc == raw_data[5]);
 }
 
-bool sht3x_init(sht3x_sensor_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool default_addr)
+bool sht3x_init(sht3x_t *sensor, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool default_addr)
 {
     if (!sensor)
         return false;
-    sensor->temp_x10 = INT16_MAX;
-    sensor->hum = UINT8_MAX;
+    sensor->temp_x10 = SHT3X_TEMP_NOT_MEASURED;
+    sensor->hum = SHT3X_HUM_NOT_MEASURED;
+    sensor->last_update = NEVER_UPDATED;
     return i2c_init(&sensor->i2c_device, sda_pin, scl_pin, (default_addr ? SHT3X_DEFAULT_ADDR : SHT3X_ALT_ADDR));
 }
 
-bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
+bool sht3x_read(sht3x_t *sensor, float *temperature, float *humidity)
 {
     if (!sensor)
         return false;
@@ -83,6 +86,12 @@ bool sht3x_read(sht3x_sensor_t *sensor, float *temperature, float *humidity)
 
     sensor->temp_x10 = temp_x10;
     sensor->hum = hum;
+
+    /* update timestamp for last successful measurement */
+    GET_TICK(sensor->last_update);
+    if (sensor->last_update  == NEVER_UPDATED)
+        sensor->last_update++;
+
 
     if (temperature)
         *temperature = 175.0f * (float)raw_temp / 65535.0f - 45.0f; /* original sht3x datasheet formula */

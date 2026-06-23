@@ -30,7 +30,7 @@
 /* 750ms conversion interval (12-bit) */
 #define CONVERSION_US 750000
 
-static void start_conversion(ds18b20_sensor_t *sensor)
+static void start_conversion(ds18b20_t *sensor)
 {
    /* write scratchpad: TH, TL, config.
    config guarantees 12-bit resolution regardless of EEPROM state.
@@ -65,7 +65,7 @@ static void start_conversion(ds18b20_sensor_t *sensor)
         sensor->conversion_started++;
 }
 
-static void update_temp(ds18b20_sensor_t *sensor)
+static void update_temp(ds18b20_t *sensor)
 {
 
     if (!onewire_check_presence(sensor->data_pin))
@@ -100,7 +100,7 @@ static void update_temp(ds18b20_sensor_t *sensor)
 
 }
 
-bool ds18b20_init(ds18b20_sensor_t *sensor, gpio_pin_t data_pin)
+bool ds18b20_init(ds18b20_t *sensor, gpio_pin_t data_pin)
 {
 
     sensor->data_pin = data_pin;
@@ -112,7 +112,7 @@ bool ds18b20_init(ds18b20_sensor_t *sensor, gpio_pin_t data_pin)
     return sensor->conversion_started != CONVERSION_NOT_STARTED;
 }
 
-bool ds18b20_update(ds18b20_sensor_t *sensor, float *temp)
+bool ds18b20_update(ds18b20_t *sensor, float *temp)
 {
     if (!sensor)
         return false;
