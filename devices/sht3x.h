@@ -12,22 +12,16 @@ extern "C"
 
 #include "../core/i2c.h"
 
-    /**
-     * @brief SHT3X sensor structure
-     * @param temp_x10 last measured temperature in fixed point format e.g. 225 means 22.5°C
-     * @param hum last measured humidity %
-     * @param i2c_device I2C device structure
-     */
     typedef struct
     {
-        int16_t temp_x10;
-        uint8_t hum;
-        i2c_device_t i2c_device;
-    } sht3x_sensor_t;
+        int16_t temp_x10;        /** last measured temperature in fixed point format e.g. 225 means 22.5°C */
+        uint8_t hum;             /** last measured humidity % */
+        i2c_device_t i2c_device; /** I2C device structure */
+    } sht3x_sensor_t;            /** SHT3X sensor structure */
 
     /**
      * @brief initialize SHT3X sensor
-     *        set default values: temp_x10 = INT16_MAX; hum = UINT8_MAX; 
+     *        set default values: temp_x10 = INT16_MAX; hum = UINT8_MAX;
      * @param sensor SHT3X sensor structure pointer
      * @param sda_pin I2C bus SDA pin
      * @param scl_pin I2C bus SCL pin

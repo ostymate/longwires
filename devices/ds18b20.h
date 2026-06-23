@@ -16,11 +16,11 @@ extern "C"
 
     typedef struct
     {
-        gpio_pin_t data_pin;         /* onewire data pin  */
-        int16_t temp_x10;            /* last measured temperature in fixed point format e.g. 225 means 22.5°C. being updated only after valid conversion.  */
-        uint32_t last_temp_update;   /* timestamp (ticks) when last valid conversion was received and temperature was updated */
-        uint32_t conversion_started; /* timestamp (ticks) when last conversion was started */
-    } ds18b20_sensor_t;              /* ds18b20 sensor struct */
+        gpio_pin_t data_pin;         /** onewire data pin  */
+        int16_t temp_x10;            /** last measured temperature in fixed point format e.g. 225 means 22.5°C. being updated only after valid conversion.  */
+        uint32_t last_temp_update;   /** timestamp (ticks) when last valid conversion was received and temperature was updated */
+        uint32_t conversion_started; /** timestamp (ticks) when last conversion was started */
+    } ds18b20_sensor_t;              /** ds18b20 sensor struct */
 
     /**
      * @brief initialize ds18b20 sensor and start first conversion

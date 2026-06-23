@@ -15,58 +15,50 @@
 #pragma once
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "platforms_common.h"
 
-/**
- * @brief I2C device structure
- * @param sda SDA pin (any pin that supports open drain configuration)
- * @param scl SCL pin (the same requirements as for SDA pin)
- * @param addr I2C device address (7-bit)
- * @param t_hold_ticks adaptive timing based on line measurement. do not modify
- * @param t_timeout_ticks SDA/SCL rise timeout ticks
- */
-typedef struct i2c_device_t
-{
-    gpio_pin_t sda;
-    gpio_pin_t scl;
-    uint8_t addr;
-    uint32_t t_hold_ticks;
-    uint32_t timeout_ticks;
-} i2c_device_t;
+    typedef struct 
+    {
+        gpio_pin_t sda;         /** SDA pin (any pin that supports open drain configuration)*/
+        gpio_pin_t scl;         /** SCL pin (the same requirements as for SDA pin) */
+        uint8_t addr;           /** I2C device address (7-bit) */
+        uint32_t t_hold_ticks;  /** adaptive timing based on line measurement. do not modify */
+        uint32_t timeout_ticks; /** SDA/SCL rise timeout ticks */
+    } i2c_device_t;             /** I2C device structure */
 
-/**
- * @brief I2C device initialization. Call it once before use (although, recall isn't dangerous)
- * @param dev I2C device structure pointer
- * @param sda SDA pin (any pin that supports open drain configuration)
- * @param scl SCL pin (the same requirements as for SDA pin)
- * @param addr I2C device address (7-bit)
- * @return true successful init, false otherwise
- */
-bool i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr);
+    /**
+     * @brief I2C device initialization. Call it once before use (although, recall isn't dangerous)
+     * @param dev I2C device structure pointer
+     * @param sda SDA pin (any pin that supports open drain configuration)
+     * @param scl SCL pin (the same requirements as for SDA pin)
+     * @param addr I2C device address (7-bit)
+     * @return true successful init, false otherwise
+     */
+    bool i2c_init(i2c_device_t *dev, gpio_pin_t sda, gpio_pin_t scl, uint8_t addr);
 
-/**
- * @brief write data to device
- * @param dev I2C device structure pointer
- * @param data data to write
- * @param len size of data
- * @param stop true: perform stop condition after writing || false: do NOT perform (false == repeated start mode)
- * @return true: slave received all bytes with ACK || false: NACK or timeout
- */
-bool i2c_write(i2c_device_t *dev, const uint8_t *data, uint32_t len, bool stop);
+    /**
+     * @brief write data to device
+     * @param dev I2C device structure pointer
+     * @param data data to write
+     * @param len size of data
+     * @param stop true: perform stop condition after writing || false: do NOT perform (false == repeated start mode)
+     * @return true: slave received all bytes with ACK || false: NACK or timeout
+     */
+    bool i2c_write(i2c_device_t *dev, const uint8_t *data, uint32_t len, bool stop);
 
-/**
- * @brief read data from device
- * @param dev I2C device structure pointer
- * @param buffer data buffer
- * @param len size of data to read
- * @param stop true: perform stop condition after reading || false: do NOT perform (false == repeated start mode)
- * @return true: all bytes were read successfully || false: timeout
- */
-bool i2c_read(i2c_device_t *dev, uint8_t *buffer, uint32_t len, bool stop);
-
+    /**
+     * @brief read data from device
+     * @param dev I2C device structure pointer
+     * @param buffer data buffer
+     * @param len size of data to read
+     * @param stop true: perform stop condition after reading || false: do NOT perform (false == repeated start mode)
+     * @return true: all bytes were read successfully || false: timeout
+     */
+    bool i2c_read(i2c_device_t *dev, uint8_t *buffer, uint32_t len, bool stop);
 
 #ifdef __cplusplus
 }

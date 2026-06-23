@@ -1,6 +1,7 @@
 #include "ds18b20.h"
 
 /* 1-Wire commands */
+#define CMD_SKIP_ROM 0xCC
 #define CMD_CONVERT_TEMP 0x44
 #define CMD_READ_SCRATCHPAD 0xBE
 #define CMD_WRITE_SCRATCHPAD 0x4E
@@ -43,7 +44,7 @@ static void start_conversion(ds18b20_sensor_t *sensor)
         sensor->conversion_started = CONVERSION_NOT_STARTED;
         return;
     }
-    onewire_write_byte(sensor->data_pin, ONEWIRE_CMD_SKIP_ROM);
+    onewire_write_byte(sensor->data_pin, CMD_SKIP_ROM);
     onewire_write_byte(sensor->data_pin, CMD_WRITE_SCRATCHPAD);
     onewire_write_byte(sensor->data_pin, TH_VALUE);
     onewire_write_byte(sensor->data_pin, TL_VALUE);
@@ -55,7 +56,7 @@ static void start_conversion(ds18b20_sensor_t *sensor)
         sensor->conversion_started = CONVERSION_NOT_STARTED;
         return;
     }
-    onewire_write_byte(sensor->data_pin, ONEWIRE_CMD_SKIP_ROM);
+    onewire_write_byte(sensor->data_pin, CMD_SKIP_ROM);
     onewire_write_byte(sensor->data_pin, CMD_CONVERT_TEMP);
     
     /* set conversion started tick */
@@ -70,7 +71,7 @@ static void update_temp(ds18b20_sensor_t *sensor)
     if (!onewire_check_presence(sensor->data_pin))
         return;
 
-    onewire_write_byte(sensor->data_pin, ONEWIRE_CMD_SKIP_ROM);
+    onewire_write_byte(sensor->data_pin, CMD_SKIP_ROM);
     onewire_write_byte(sensor->data_pin, CMD_READ_SCRATCHPAD);
 
     uint8_t scratchpad[SCRATCHPAD_SIZE];

@@ -15,16 +15,11 @@ extern "C"
 #define OLED_HEIGHT 64
 #define BUF_SIZE (1 + OLED_WIDTH) /* first byte is DATA_BYTE, followed by page content */
 
-    /**
-     * @brief OLED device structure
-     * @param buf Buffer for I2C data
-     * @param i2c_device I2C device structure for communication with the OLED display
-     */
     typedef struct
     {
-        uint8_t buf[BUF_SIZE];
-        i2c_device_t i2c_device;
-    } oled_t;
+        uint8_t buf[BUF_SIZE];   /** buffer for page data and commands */
+        i2c_device_t i2c_device; /** I2C device structure */
+    } oled_t;                    /** OLED device structure */
 
     /**
      * @brief Initialize the OLED display
