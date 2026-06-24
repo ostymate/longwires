@@ -1,6 +1,6 @@
 /**
  * @file lw_avr.h
- * @brief Platform abstraction for AVR — bare metal / arduino GPIO and timing
+ * @brief Platform abstraction for AVR
  * @note requirements: TIMER1
  *
  */
@@ -22,8 +22,7 @@ extern "C"
     /**
      * @brief GPIO pin descriptor
      * @note usage:
-     * @note gpio_pin_t led_pin = PIN_INIT(PB5); <--- bare metal AVR
-     * @note gpio_pin_t led_pin = PIN_INIT(13); <--- ARDUINO framework only
+     * @note gpio_pin_t led_pin = PIN_INIT(DDRB, PORTB, PINB, 5);
      */
     typedef struct
     {
@@ -33,54 +32,16 @@ extern "C"
         uint8_t bit;
     } gpio_pin_t;
 
-#ifdef ARDUINO
-#include <Arduino.h>
-    /**
-     * @brief Initialise a gpio_pin_t from an Arduino pin number.
-     * @param pin  Arduino digital pin number (0..13 on Uno)
-     * @return     Initialised gpio_pin_t structure
-     */
-    static inline gpio_pin_t PIN_INIT(uint8_t pin)
-    {
-        gpio_pin_t p;
-        p.DDRx = portModeRegister(digitalPinToPort(pin));
-        p.PORTx = portOutputRegister(digitalPinToPort(pin));
-        p.PINx = portInputRegister(digitalPinToPort(pin));
-        p.bit = __builtin_ctz(digitalPinToBitMask(pin));
-        return p;
-    }
-#endif /* ARDUINO */
-
-#ifndef ARDUINO /* bare metal AVR */
-#ifndef DDRC
-#ifdef DDRA
-#define DDR_OFFSET (DDRB - DDRA)
-#define PORT_OFFSET (PORTB - PORTA)
-#define PIN_OFFSET (PINB - PINA)
-#else
-#define DDR_OFFSET 0
-#define PORT_OFFSET 0
-#define PIN_OFFSET 0
-#endif /* DDRA */
-#else
-#define DDR_OFFSET (DDRC - DDRB)
-#define PORT_OFFSET (PORTC - PORTB)
-#define PIN_OFFSET (PINC - PINB)
-#endif /* DDRC */
-
 /**
- * @brief Initialise a gpio_pin_t from an AVR pin name.
- * @param pin  AVR pin macro: PB0, PC3, PD5, …
- * @return     Initialised gpio_pin_t structure
+ * @brief Initialize gpio_pin_t 
+ * @param DDR Data Direction Register (DDRB, DDRC...)
+ * @param PORT Port Output Register (PORTB, PORTC...)
+ * @param PIN Port Input Register (PINB, PINC...)
+ * @param pin pin number (0-7)
+ * @return gpio_pin_t structure
+ * @note Example: gpio_pin_t led = PIN_INIT(DDRB, PORTB, PINB, 5);
  */
-#define PIN_INIT(pin)                                               \
-    {                                                               \
-        .DDRx = &DDRB + (((int)(#pin[1] - 'B')) * (DDR_OFFSET)),    \
-        .PORTx = &PORTB + (((int)(#pin[1] - 'B')) * (PORT_OFFSET)), \
-        .PINx = &PINB + (((int)(#pin[1] - 'B')) * (PIN_OFFSET)),    \
-        .bit = pin}
-
-#endif /* bare metal AVR */
+#define PIN_INIT(DDR, PORT, PIN, pin) {.DDRx = &DDR, .PORTx = &PORT, .PINx = &PIN, .bit = (uint8_t)(pin)}
 
 /**
  * @brief High-impedance input: DDR=0, PORT=0

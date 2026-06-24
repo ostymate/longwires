@@ -19,6 +19,7 @@ void TICK_INIT(void)
 {
     if (_timer1_init)
         return;
+    sei();
     _timer1_overflow = 0;
     TCCR1A = 0;
     TCCR1B = (1 << CS10);

@@ -58,9 +58,17 @@ lib_deps =
 #include "sht3x.h"
 #include "ssd1306.h"
 #include "ds3231.h"
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <stdio.h>
+
+ds18b20_t ds18b20;
+sht3x_t sht3x;
+ssd1306_t oled;
+ds3231_t rtc;
+
+char buf[128];
 
 void app_main(void)
 {
@@ -69,15 +77,7 @@ void app_main(void)
     gpio_pin_t scl = PIN_INIT(22);
     gpio_pin_t ow_pin = PIN_INIT(23);
 
-    ds18b20_t ds18b20;
-    sht3x_t sht3x;
-    ssd1306_t oled;
-    ds3231_t rtc;
-
-    char buf[128];
-    uint32_t now;
-
-    if (ssd1306_init(&oled, sda, scl, true, false))  /* true - default addr (0x3C),  false - don't flip display 180° */
+    if (ssd1306_init(&oled, sda, scl, true, false)) /* true - default addr (0x3C),  false - don't flip display 180° */
         ssd1306_print(&oled, "Initializing...");
     vTaskDelay(pdMS_TO_TICKS(300));
 
@@ -106,13 +106,16 @@ void app_main(void)
     rtc.second = 0;
     ds3231_set_time(&rtc);
 
-    while (1) {
+    uint32_t now;
+
+    while (1)
+    {
         ds3231_get_time(&rtc);
         sht3x_read(&sht3x, NULL, NULL);
         ds18b20_update(&ds18b20, NULL);
 
         GET_TICK(now);
-        
+
         /* calculate how data aged */
         uint32_t sht3x_data_age_ms = (now - sht3x.last_update) / US_TO_TICKS(1) / 1000;
         uint32_t ds18_temp_age_ms = (now - ds18b20.last_temp_update) / US_TO_TICKS(1) / 1000;
@@ -135,7 +138,15 @@ void app_main(void)
 #include "sht3x.h"
 #include "ssd1306.h"
 #include "ds3231.h"
+
 #include <stdio.h>
+
+ds18b20_t ds18b20;
+sht3x_t sht3x;
+ssd1306_t oled;
+ds3231_t rtc;
+
+char buf[128];
 
 int main(void)
 {
@@ -143,14 +154,6 @@ int main(void)
     gpio_pin_t sda = PIN_INIT(GPIOB, 6);
     gpio_pin_t scl = PIN_INIT(GPIOB, 7);
     gpio_pin_t ow_pin = PIN_INIT(GPIOB, 8);
-
-    ds18b20_t ds18b20;
-    sht3x_t sht3x;
-    ssd1306_t oled;
-    ds3231_t rtc;
-
-    char buf[128];
-    uint32_t now;
 
     if (ssd1306_init(&oled, sda, scl, true, false))
         ssd1306_print(&oled, "Initializing...");
@@ -178,7 +181,10 @@ int main(void)
     rtc.second = 0;
     ds3231_set_time(&rtc);
 
-    while (1) {
+    uint32_t now;
+    
+    while (1)
+    {
         ds3231_get_time(&rtc);
         sht3x_read(&sht3x, NULL, NULL);
         ds18b20_update(&ds18b20, NULL);
@@ -204,22 +210,23 @@ int main(void)
 #include "sht3x.h"
 #include "ssd1306.h"
 #include "ds3231.h"
+
 #include <stdio.h>
+#include <stdlib.h>
+
+ds18b20_t ds18b20;
+sht3x_t sht3x;
+ssd1306_t oled;
+ds3231_t rtc;
+
+char buf[128];
 
 int main(void)
 {
-    /* AVR bare metal pin format: PIN_INIT(Pxn) */
-    gpio_pin_t sda = PIN_INIT(PC4);
-    gpio_pin_t scl = PIN_INIT(PC5);
-    gpio_pin_t ow_pin = PIN_INIT(PB0);
-
-    ds18b20_t ds18b20;
-    sht3x_t sht3x;
-    ssd1306_t oled;
-    ds3231_t rtc;
-
-    char buf[128];
-    uint32_t now;
+    /* avr pin format: PIN_INIT(DDRx, PORTx, PINx, pin_number) */
+    gpio_pin_t sda = PIN_INIT(DDRC, PORTC, PINC, 0);
+    gpio_pin_t scl = PIN_INIT(DDRC, PORTC, PINC, 1);
+    gpio_pin_t ow_pin = PIN_INIT(DDRB, PORTB, PINB, 0);
 
     if (ssd1306_init(&oled, sda, scl, true, false))
         ssd1306_print(&oled, "Initializing...");
@@ -230,76 +237,6 @@ int main(void)
         ssd1306_print(&oled, "ds18b20: FAIL");
 
     if (sht3x_init(&sht3x, sda, scl, true))
-        ssd1306_print(&oled, "sht3x: OK");
-    else
-        ssd1306_print(&oled, "sht3x: FAIL");
-
-    if (ds3231_init(&rtc, sda, scl))
-        ssd1306_print(&oled, "ds3231: OK");
-    else
-        ssd1306_print(&oled, "ds3231: FAIL");
-
-    rtc.year = 2026;
-    rtc.month = 6;
-    rtc.day = 23;
-    rtc.hour = 18;
-    rtc.minute = 21;
-    rtc.second = 0;
-    ds3231_set_time(&rtc);
-
-    while (1) {
-        ds3231_get_time(&rtc);
-        sht3x_read(&sht3x, NULL, NULL);
-        ds18b20_update(&ds18b20, NULL);
-
-        GET_TICK(now);
-
-        uint32_t sht3x_data_age_ms = (now - sht3x.last_update) / US_TO_TICKS(1) / 1000;
-        uint32_t ds18_temp_age_ms = (now - ds18b20.last_temp_update) / US_TO_TICKS(1) / 1000;
-
-        snprintf(buf, sizeof(buf), "%u.%02u.%02u %02u:%02u:%02u\n\nSHT31 %d.%dC %u%%\n%lu ms ago\n\nDS18B20 %d.%dC\n%lu ms ago\n",
-                 rtc.year, rtc.month, rtc.day, rtc.hour, rtc.minute, rtc.second,
-                 sht3x.temp_x10 / 10, abs(sht3x.temp_x10 % 10), sht3x.hum, sht3x_data_age_ms,
-                 ds18b20.temp_x10 / 10, abs(ds18b20.temp_x10 % 10), ds18_temp_age_ms);
-
-        ssd1306_print(&oled, buf);
-    }
-}
-```
-
-***AVR with ARDUINO***
-```c
-#include <Arduino.h>
-#include "ds18b20.h"
-#include "sht3x.h"
-#include "ssd1306.h"
-#include "ds3231.h"
-
-gpio_pin_t sda = PIN_INIT(PIN_A0);
-gpio_pin_t scl = PIN_INIT(PIN_A1);
-gpio_pin_t ow_pin = PIN_INIT(8);
-
-ds18b20_t ds18b20;
-sht3x_t sht3x;
-ssd1306_t oled;
-ds3231_t rtc;
-
-char buf[128];
-uint32_t now;
-
-void setup()
-{
-    Serial.begin(115200);
-
-    if (ssd1306_init(&oled, sda, scl, true, false))
-        ssd1306_print(&oled, "Initializing...");
-
-    if (ds18b20_init(&ds18b20, ow_pin))
-        ssd1306_print(&oled, "ds18b20: OK");
-    else
-        ssd1306_print(&oled, "ds18b20: FAIL");
-
-    if (sht3x_init(&sht3x, sda, scl, true)) 
         ssd1306_print(&oled, "sht3x: OK");
     else
         ssd1306_print(&oled, "sht3x: FAIL!");
@@ -316,27 +253,28 @@ void setup()
     rtc.minute = 21;
     rtc.second = 0;
     ds3231_set_time(&rtc);
+
+    uint32_t now;
+
+    while (1)
+    {
+        ds3231_get_time(&rtc);
+        sht3x_read(&sht3x, NULL, NULL);
+        ds18b20_update(&ds18b20, NULL);
+
+        GET_TICK(now);
+
+        uint32_t sht3x_data_age_ms = (now - sht3x.last_update) / US_TO_TICKS(1) / 1000;
+        uint32_t ds18_temp_age_ms = (now - ds18b20.last_temp_update) / US_TO_TICKS(1) / 1000;
+
+        snprintf(buf, sizeof(buf), "%u.%02u.%02u %02u:%02u:%02u\n\nSHT31 %d.%dC %u\%%\n%lu ms ago\n\nDS18B20 %d.%dC\n%lu ms ago\n",
+                 rtc.year, rtc.month, rtc.day, rtc.hour, rtc.minute, rtc.second,
+                 sht3x.temp_x10 / 10, abs(sht3x.temp_x10 % 10), sht3x.hum, sht3x_data_age_ms,
+                 ds18b20.temp_x10 / 10, abs(ds18b20.temp_x10 % 10), ds18_temp_age_ms);
+
+        ssd1306_print(&oled, buf);
+    }
 }
-
-void loop()
-{
-    ds3231_get_time(&rtc);
-    sht3x_read(&sht3x, NULL, NULL);
-    ds18b20_update(&ds18b20, NULL);
-
-    GET_TICK(now);
-    
-    uint32_t sht3x_data_age_ms = (now - sht3x.last_update) / US_TO_TICKS(1) / 1000;
-    uint32_t ds18_temp_age_ms = (now - ds18b20.last_temp_update) / US_TO_TICKS(1) / 1000;
-
-    snprintf(buf, sizeof(buf), "%u.%02u.%02u %02u:%02u:%02u\n\nSHT31 %d.%dC %u\%%\n%lu ms ago\n\nDS18B20 %d.%dC\n%lu ms ago\n",
-             rtc.year, rtc.month, rtc.day, rtc.hour, rtc.minute, rtc.second,
-             sht3x.temp_x10 / 10, abs(sht3x.temp_x10 % 10), sht3x.hum, sht3x_data_age_ms,
-             ds18b20.temp_x10 / 10, abs(ds18b20.temp_x10 % 10), ds18_temp_age_ms);
-
-    ssd1306_print(&oled, buf);
-}
-
 ```
 
 ## DS18B20 wiring diagram 
