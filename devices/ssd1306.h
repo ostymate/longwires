@@ -18,8 +18,9 @@ extern "C"
     typedef struct
     {
         uint8_t buf[BUF_SIZE];   /** buffer for page data and commands */
+        bool flip;               /** true - flip device 180°, false don't */
         i2c_device_t i2c_device; /** I2C device structure */
-    } ssd1306_t;                    /** OLED device structure */
+    } ssd1306_t;                 /** OLED device structure */
 
     /**
      * @brief Initialize the OLED display

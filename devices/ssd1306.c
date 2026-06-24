@@ -5,8 +5,8 @@
 
 #include "ssd1306.h"
 
-#define SSD1306_I2C_ADDR_DEFAULT 0x3C
-#define SSD1306_I2C_ADDR_ALT 0x3D
+#define I2C_ADDR_DEFAULT 0x3C
+#define I2C_ADDR_ALT 0x3D
 
 #define CMD_BYTE 0x00
 #define DATA_BYTE 0x40
@@ -29,15 +29,34 @@
 #define CMD_ENTIRE_DISP_ON 0xA4
 #define CMD_NORMAL_DISP 0xA6
 #define CMD_CHARGE_PUMP 0x8D
-#define CMD_CHARGE_PUMP_ENABLE 0x14
+#define CMD_SET_DISP_OFFSET 0xD3
+#define CMD_SET_DISP_START 0x40
+#define CMD_DEACTIVATE_SCROLL 0x2E
+#define CMD_SET_IREF 0xAD
+#define CMD_MEM_ADDR_MODE 0x20
+#define CMD_MEM_ADDR_PAGE 0x02
+#define CMD_SET_VSCROLL_AREA 0xA3
+#define CMD_SOFT_RESET 0xE2
+
+#define CLOCK_DIV_DEFAULT 0x80
+#define MULTIPLEX_64 0x3F
+#define OFFSET_DEFAULT 0x00
+#define COM_PINS_ALT 0x12
+#define CONTRAST_DEFAULT 0x7F
+#define PRECHARGE_DEFAULT 0xF1
+#define VCOMH_DEFAULT 0x40
+#define CHARGE_PUMP_ENABLE 0x14
+#define VSCROLL_TOP_FIXED 0x00
+#define VSCROLL_AREA_FULL 0x40
+#define EXTERNAL_VCC 0x8A
 
 #define PAGE_HEIGHT 8
 #define CHAR_WIDTH 5
 #define PAGE_COUNT (OLED_HEIGHT / PAGE_HEIGHT)
 #define CHAR_PER_PAGE (OLED_WIDTH / CHAR_WIDTH)
 
-#define FIRST_CHAR 0x20
-#define LAST_CHAR 0x7E
+#define FIRST_CHAR ((int)' ')
+#define LAST_CHAR ((int)'~')
 
 static const uint8_t font[95][CHAR_WIDTH] = {
     {0x00, 0x00, 0x00, 0x00, 0x00}, /*   space */
@@ -137,43 +156,65 @@ static const uint8_t font[95][CHAR_WIDTH] = {
     {0x08, 0x04, 0x08, 0x10, 0x08}, /* ~ */
 };
 
+static bool full_reset_and_select_page(ssd1306_t *dev, uint8_t page)
+{
+    uint8_t *buf = dev->buf;
+
+    buf[0] = CMD_BYTE;
+    buf[1] = CMD_SOFT_RESET; // Soft Reset
+    i2c_write(&dev->i2c_device, buf, 2, true);
+
+    buf[0] = CMD_BYTE;
+    buf[1] = CMD_SET_CLOCK_DIV;
+    buf[2] = CLOCK_DIV_DEFAULT;
+    buf[3] = CMD_SET_MULTIPLEX;
+    buf[4] = MULTIPLEX_64;
+    buf[5] = CMD_SET_DISP_OFFSET;
+    buf[6] = OFFSET_DEFAULT;
+    buf[7] = CMD_SET_DISP_START;
+    buf[8] = dev->flip ? CMD_SEG_REMAP_FLIP : CMD_SEG_REMAP;
+    buf[9] = dev->flip ? CMD_COM_SCAN_FLIP : CMD_COM_SCAN_NORMAL;
+    buf[10] = CMD_SET_COM_PINS;
+    buf[11] = COM_PINS_ALT;
+    buf[12] = CMD_SET_CONTRAST;
+    buf[13] = CONTRAST_DEFAULT;
+    buf[14] = CMD_MEM_ADDR_MODE;
+    buf[15] = CMD_MEM_ADDR_PAGE;
+    buf[16] = CMD_ENTIRE_DISP_ON;
+    buf[17] = CMD_NORMAL_DISP;
+    buf[18] = CMD_SET_PRECHARGE;
+    buf[19] = PRECHARGE_DEFAULT;
+    buf[20] = CMD_SET_VCOM_DESEL;
+    buf[21] = VCOMH_DEFAULT;
+    buf[22] = CMD_CHARGE_PUMP;
+    buf[23] = CHARGE_PUMP_ENABLE;
+    buf[24] = CMD_SET_VSCROLL_AREA;
+    buf[25] = VSCROLL_TOP_FIXED;
+    buf[26] = VSCROLL_AREA_FULL;
+    buf[27] = CMD_DEACTIVATE_SCROLL;
+    buf[28] = CMD_SET_DISP_ON;
+    buf[29] = CMD_SET_PAGE_START | page;
+    buf[30] = CMD_SET_COL_LOW;
+    buf[31] = CMD_SET_COL_HIGH;
+    buf[32] = CMD_SET_IREF;
+    buf[33] = EXTERNAL_VCC;
+
+    return i2c_write(&dev->i2c_device, buf, 32, true);
+}
+
 bool ssd1306_init(ssd1306_t *dev, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool use_default_addr, bool flip)
 {
     if (!dev)
-        return false; /* Invalid parameter */
+        return false;
 
     i2c_init(&dev->i2c_device, sda_pin, scl_pin,
-             use_default_addr ? SSD1306_I2C_ADDR_DEFAULT : SSD1306_I2C_ADDR_ALT);
+             use_default_addr ? I2C_ADDR_DEFAULT : I2C_ADDR_ALT);
+
+    dev->flip = flip;
 
     /* Clear display */
     if (!ssd1306_print(dev, ""))
-        return false; /* Failed to clear display */
-
-    uint8_t *buf = dev->buf;
-    buf[0] = CMD_BYTE;
-    buf[1] = CMD_SET_DISP_OFF;
-    buf[2] = CMD_SET_CLOCK_DIV;
-    buf[3] = 0x80;
-    buf[4] = CMD_SET_MULTIPLEX;
-    buf[5] = 0x3F;
-    buf[6] = CMD_CHARGE_PUMP;
-    buf[7] = CMD_CHARGE_PUMP_ENABLE;
-    buf[8] = flip ? CMD_SEG_REMAP_FLIP : CMD_SEG_REMAP;
-    buf[9] = flip ? CMD_COM_SCAN_FLIP : CMD_COM_SCAN_NORMAL;
-    buf[10] = CMD_SET_COM_PINS;
-    buf[11] = 0x12;
-    buf[12] = CMD_SET_CONTRAST;
-    buf[13] = 0x7F;
-    buf[14] = CMD_SET_PRECHARGE;
-    buf[15] = 0xF1;
-    buf[16] = CMD_SET_VCOM_DESEL;
-    buf[17] = 0x40;
-    buf[18] = CMD_ENTIRE_DISP_ON;
-    buf[19] = CMD_NORMAL_DISP;
-    buf[20] = CMD_SET_DISP_ON;
-
-    if (!i2c_write(&dev->i2c_device, buf, 21, true))
-        return false; /* Failed to initialize display */
+        return false; /* Failed  */
 
     return true;
 }
@@ -181,7 +222,7 @@ bool ssd1306_init(ssd1306_t *dev, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool u
 bool ssd1306_print(ssd1306_t *dev, const char *str)
 {
     if (!dev || !str)
-        return false; /* Invalid parameters */
+        return false;
 
     uint8_t *buf = dev->buf;
     uint8_t page = 0;
@@ -191,14 +232,8 @@ bool ssd1306_print(ssd1306_t *dev, const char *str)
         if (page >= PAGE_COUNT)
             break; /* No more pages available */
 
-        /* set position to the start of the page */
-        buf[0] = CMD_BYTE;
-        buf[1] = CMD_SET_PAGE_START | page++;
-        buf[2] = CMD_SET_COL_LOW;
-        buf[3] = CMD_SET_COL_HIGH;
-
-        if (!i2c_write(&dev->i2c_device, buf, 4, true))
-            return false; /* Failed to set position */
+        if (!full_reset_and_select_page(dev, page++))
+            return false;
 
         /* fill data buffer */
         buf[0] = DATA_BYTE;
