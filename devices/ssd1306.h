@@ -35,9 +35,9 @@ extern "C"
 
     /**
      * @brief Print ASCII text
-     * @note Autowraps at screen edge, truncates at screen bottom,
-     *       `\n` forces newline, empty string clears display.
-     *       Only printable ASCII characters 0x20–0x7E are printed; others terminate the string.
+     * @note Starts from top left corner, wraps at screen edge, truncates at screen bottom,
+     *       clears the rest of the display after '\0', '\n' forces newline,
+     *       prints only printable ASCII characters 0x20–0x7E, replaces others with space ' '
      * @param dev Pointer to the OLED device structure
      * @param str String to print
      * @return true on success, false on failure

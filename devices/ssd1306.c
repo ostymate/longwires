@@ -14,7 +14,6 @@
 #define CMD_SET_PAGE_START 0xB0
 #define CMD_SET_COL_LOW 0x00
 #define CMD_SET_COL_HIGH 0x10
-#define CMD_SET_DISP_OFF 0xAE
 #define CMD_SET_DISP_ON 0xAF
 #define CMD_SET_CONTRAST 0x81
 #define CMD_SEG_REMAP 0xA0
@@ -37,6 +36,7 @@
 #define CMD_MEM_ADDR_PAGE 0x02
 #define CMD_SET_VSCROLL_AREA 0xA3
 #define CMD_SOFT_RESET 0xE2
+#define CMD_SET_DISPLAY_MODE 0xD6
 
 #define CLOCK_DIV_DEFAULT 0x80
 #define MULTIPLEX_64 0x3F
@@ -49,14 +49,15 @@
 #define VSCROLL_TOP_FIXED 0x00
 #define VSCROLL_AREA_FULL 0x40
 #define EXTERNAL_VCC 0x8A
+#define NORMAL_MODE 0x00
 
 #define PAGE_HEIGHT 8
 #define CHAR_WIDTH 5
 #define PAGE_COUNT (OLED_HEIGHT / PAGE_HEIGHT)
 #define CHAR_PER_PAGE (OLED_WIDTH / CHAR_WIDTH)
 
-#define FIRST_CHAR ((int)' ')
-#define LAST_CHAR ((int)'~')
+#define FIRST_CHAR ((uint8_t)' ')
+#define LAST_CHAR ((uint8_t)'~')
 
 static const uint8_t font[95][CHAR_WIDTH] = {
     {0x00, 0x00, 0x00, 0x00, 0x00}, /*   space */
@@ -156,50 +157,49 @@ static const uint8_t font[95][CHAR_WIDTH] = {
     {0x08, 0x04, 0x08, 0x10, 0x08}, /* ~ */
 };
 
-static bool full_reset_and_select_page(ssd1306_t *dev, uint8_t page)
+static bool full_reset(ssd1306_t *dev, uint8_t page)
 {
     uint8_t *buf = dev->buf;
 
     buf[0] = CMD_BYTE;
-    buf[1] = CMD_SOFT_RESET; // Soft Reset
-    i2c_write(&dev->i2c_device, buf, 2, true);
+    buf[1] = CMD_SOFT_RESET;
+    buf[2] = CMD_SET_CLOCK_DIV;
+    buf[3] = CLOCK_DIV_DEFAULT;
+    buf[4] = CMD_SET_MULTIPLEX;
+    buf[5] = MULTIPLEX_64;
+    buf[6] = CMD_SET_DISP_OFFSET;
+    buf[7] = OFFSET_DEFAULT;
+    buf[8] = CMD_SET_DISP_START;
+    buf[9] = dev->flip ? CMD_SEG_REMAP_FLIP : CMD_SEG_REMAP;
+    buf[10] = dev->flip ? CMD_COM_SCAN_FLIP : CMD_COM_SCAN_NORMAL;
+    buf[11] = CMD_SET_COM_PINS;
+    buf[12] = COM_PINS_ALT;
+    buf[13] = CMD_SET_CONTRAST;
+    buf[14] = CONTRAST_DEFAULT;
+    buf[15] = CMD_MEM_ADDR_MODE;
+    buf[16] = CMD_MEM_ADDR_PAGE;
+    buf[17] = CMD_ENTIRE_DISP_ON;
+    buf[18] = CMD_NORMAL_DISP;
+    buf[19] = CMD_SET_PRECHARGE;
+    buf[20] = PRECHARGE_DEFAULT;
+    buf[21] = CMD_SET_VCOM_DESEL;
+    buf[22] = VCOMH_DEFAULT;
+    buf[23] = CMD_CHARGE_PUMP;
+    buf[24] = CHARGE_PUMP_ENABLE;
+    buf[25] = CMD_SET_VSCROLL_AREA;
+    buf[26] = VSCROLL_TOP_FIXED;
+    buf[27] = VSCROLL_AREA_FULL;
+    buf[28] = CMD_DEACTIVATE_SCROLL;
+    buf[29] = CMD_SET_DISP_ON;
+    buf[30] = CMD_SET_PAGE_START | page;
+    buf[31] = CMD_SET_COL_LOW;
+    buf[32] = CMD_SET_COL_HIGH;
+    buf[33] = CMD_SET_IREF;
+    buf[34] = EXTERNAL_VCC;
+    buf[35] = CMD_SET_DISPLAY_MODE;
+    buf[36] = NORMAL_MODE;
 
-    buf[0] = CMD_BYTE;
-    buf[1] = CMD_SET_CLOCK_DIV;
-    buf[2] = CLOCK_DIV_DEFAULT;
-    buf[3] = CMD_SET_MULTIPLEX;
-    buf[4] = MULTIPLEX_64;
-    buf[5] = CMD_SET_DISP_OFFSET;
-    buf[6] = OFFSET_DEFAULT;
-    buf[7] = CMD_SET_DISP_START;
-    buf[8] = dev->flip ? CMD_SEG_REMAP_FLIP : CMD_SEG_REMAP;
-    buf[9] = dev->flip ? CMD_COM_SCAN_FLIP : CMD_COM_SCAN_NORMAL;
-    buf[10] = CMD_SET_COM_PINS;
-    buf[11] = COM_PINS_ALT;
-    buf[12] = CMD_SET_CONTRAST;
-    buf[13] = CONTRAST_DEFAULT;
-    buf[14] = CMD_MEM_ADDR_MODE;
-    buf[15] = CMD_MEM_ADDR_PAGE;
-    buf[16] = CMD_ENTIRE_DISP_ON;
-    buf[17] = CMD_NORMAL_DISP;
-    buf[18] = CMD_SET_PRECHARGE;
-    buf[19] = PRECHARGE_DEFAULT;
-    buf[20] = CMD_SET_VCOM_DESEL;
-    buf[21] = VCOMH_DEFAULT;
-    buf[22] = CMD_CHARGE_PUMP;
-    buf[23] = CHARGE_PUMP_ENABLE;
-    buf[24] = CMD_SET_VSCROLL_AREA;
-    buf[25] = VSCROLL_TOP_FIXED;
-    buf[26] = VSCROLL_AREA_FULL;
-    buf[27] = CMD_DEACTIVATE_SCROLL;
-    buf[28] = CMD_SET_DISP_ON;
-    buf[29] = CMD_SET_PAGE_START | page;
-    buf[30] = CMD_SET_COL_LOW;
-    buf[31] = CMD_SET_COL_HIGH;
-    buf[32] = CMD_SET_IREF;
-    buf[33] = EXTERNAL_VCC;
-
-    return i2c_write(&dev->i2c_device, buf, 32, true);
+    return i2c_write(&dev->i2c_device, buf, 37, true);
 }
 
 bool ssd1306_init(ssd1306_t *dev, gpio_pin_t sda_pin, gpio_pin_t scl_pin, bool use_default_addr, bool flip)
@@ -232,7 +232,8 @@ bool ssd1306_print(ssd1306_t *dev, const char *str)
         if (page >= PAGE_COUNT)
             break; /* No more pages available */
 
-        if (!full_reset_and_select_page(dev, page++))
+        /* full reset before each page for extra robustness*/
+        if (!full_reset(dev, page++))
             return false;
 
         /* fill data buffer */
@@ -240,15 +241,17 @@ bool ssd1306_print(ssd1306_t *dev, const char *str)
         uint8_t pos = 1; /* Start of page data */
         for (uint8_t i = 0; i < CHAR_PER_PAGE; i++)
         {
-            if ((*str < FIRST_CHAR || *str > LAST_CHAR))
-                break; /* End of string or '\n' or unsupported character terminates the string */
+            if ((*str == '\n'))
+            {
+                str++; /* Skip newline character */
+                break; /* end current line */
+            }
+            if ((*str == '\0'))
+                break;
             for (uint8_t j = 0; j < CHAR_WIDTH; j++)
-                buf[pos++] = font[*str - FIRST_CHAR][j];
+                buf[pos++] = font[(uint8_t)*str < FIRST_CHAR || (uint8_t)*str > LAST_CHAR ? FIRST_CHAR: (uint8_t)*str - FIRST_CHAR][j];
             str++;
         }
-
-        if (*str == '\n')
-            str++; /* Skip newline character */
 
         /* clear end of the line */
         while (pos < BUF_SIZE)
