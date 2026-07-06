@@ -31,6 +31,7 @@
         SHT3X
         DS3231
         SSD1306 
+        AS7341 
     1-Wire:
         DS18B20
 
