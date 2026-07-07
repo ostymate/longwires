@@ -33,6 +33,7 @@ extern "C"
      * @param sda sda pin
      * @param scl scl pin
      * @return true for successful init, false otherwise
+     * @note after init and before first successful measurement all channels == 0
      */
     bool as7341_init(as7341_t *dev, gpio_pin_t sda, gpio_pin_t scl);
 
@@ -41,6 +42,9 @@ extern "C"
      * @param dev device structure pointer
      * @param led_brightness 0...127, 0 == led off, 127 and above == MAX brightness
      * @return true - successful measurement, false otherwise
+     * @note updates spectral data only after successful measurement, otherwise doesn't modify 'em
+     * @note the whole uint16_t range (0...65535) are valid values for all channels
+     * @note 65535 means saturation 
      */
     bool as7341_read_all(as7341_t *dev, uint8_t led_brightness);
 
