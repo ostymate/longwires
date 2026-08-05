@@ -157,7 +157,7 @@ static const uint8_t font[95][CHAR_WIDTH] = {
     {0x08, 0x04, 0x08, 0x10, 0x08}, /* ~ */
 };
 
-static bool full_reset(ssd1306_t *dev, uint8_t page)
+static bool full_reset(ssd1306_t *dev)
 {
     uint8_t *buf = dev->buf;
 
@@ -191,7 +191,7 @@ static bool full_reset(ssd1306_t *dev, uint8_t page)
     buf[27] = VSCROLL_AREA_FULL;
     buf[28] = CMD_DEACTIVATE_SCROLL;
     buf[29] = CMD_SET_DISP_ON;
-    buf[30] = CMD_SET_PAGE_START | page;
+    buf[30] = CMD_SET_PAGE_START;
     buf[31] = CMD_SET_COL_LOW;
     buf[32] = CMD_SET_COL_HIGH;
     buf[33] = CMD_SET_IREF;
@@ -227,13 +227,17 @@ bool ssd1306_print(ssd1306_t *dev, const char *str)
     uint8_t *buf = dev->buf;
     uint8_t page = 0;
 
+    /* full reset before each print*/
+    if (!full_reset(dev))
+        return false;
+
     while (*str || page < PAGE_COUNT)
     {
         if (page >= PAGE_COUNT)
             break; /* No more pages available */
 
-        /* full reset before each page for extra robustness*/
-        if (!full_reset(dev, page++))
+        /* set current page */
+        if (!i2c_write(&dev->i2c_device, (uint8_t[2]){CMD_BYTE, CMD_SET_PAGE_START | page++}, 2, true))
             return false;
 
         /* fill data buffer */
@@ -248,8 +252,9 @@ bool ssd1306_print(ssd1306_t *dev, const char *str)
             }
             if ((*str == '\0'))
                 break;
+            uint8_t c = (uint8_t)*str < FIRST_CHAR || (uint8_t)*str > LAST_CHAR ? FIRST_CHAR : (uint8_t)*str - FIRST_CHAR;
             for (uint8_t j = 0; j < CHAR_WIDTH; j++)
-                buf[pos++] = font[(uint8_t)*str < FIRST_CHAR || (uint8_t)*str > LAST_CHAR ? FIRST_CHAR: (uint8_t)*str - FIRST_CHAR][j];
+                buf[pos++] = font[c][j];
             str++;
         }
 
