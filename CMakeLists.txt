@@ -8,6 +8,7 @@ idf_component_register(
         "platforms"
     REQUIRES
         driver
+        esp_driver_gpio
 )
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_PLATFORM)
